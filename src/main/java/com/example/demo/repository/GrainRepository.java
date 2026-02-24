@@ -4,8 +4,11 @@ package com.example.demo.repository;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.stereotype.Repository;
+
 import com.example.demo.domain.Grain;
 
+@Repository
 public class GrainRepository {
     private final Map<String, Grain> maltDb = new HashMap<>();
 

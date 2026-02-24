@@ -4,10 +4,13 @@ package com.example.demo.repository;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.stereotype.Repository;
+
 import com.example.demo.domain.Yeast;
 import com.example.demo.domain.enums.YeastForm;
 import com.example.demo.domain.enums.YeastType;
 
+@Repository
 public class YeastRepository {
     private final Map<String, Yeast> yeastDb = new HashMap<>();
 

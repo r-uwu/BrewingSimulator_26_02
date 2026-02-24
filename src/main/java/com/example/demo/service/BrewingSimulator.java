@@ -23,7 +23,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class BrewingSimulator {
 
-    // 엔진 로드
     private final BrewCalculator calculator;
     private final FermentationEngine fermentationEngine;
     private final DensityEngine densityEngine;
@@ -101,8 +100,9 @@ public class BrewingSimulator {
                             0, 0
                     ));
 
-
+                    if (dryHopAddition.hop().flavorTags() != null) {
                     dryHopTags.addAll(dryHopAddition.hop().flavorTags());
+                    }
                 }
             }
 

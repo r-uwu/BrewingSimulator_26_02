@@ -16,8 +16,8 @@ import com.example.demo.simulation.SimulationLog;
 
 import lombok.RequiredArgsConstructor;
 
-@RestController // 이 클래스가 REST API 요청을 처리함을 명시
-@RequestMapping("/api/brewing") // 기본 URL 경로 설정
+@RestController
+@RequestMapping("/api/brewing")
 @RequiredArgsConstructor
 public class BrewingController {
 
