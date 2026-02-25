@@ -27,7 +27,9 @@ public class RecipePreparationService {
         if (recipe.getGrainItems() != null) {
             List<GrainItem> grains = recipe.getGrainItems().stream()
                 .map(item -> new GrainItem(
-                        grainRepo.findByName(item.grain().name()),
+                        //grainRepo.findByName(item.grain().getName()),
+                		grainRepo.findByName(item.grain().getName())
+                        .orElseThrow(() -> new RuntimeException("몰트를 찾을 수 없습니다: " + item.grain().getName())),
                         item.weightKg()
                 )).collect(Collectors.toList());
             

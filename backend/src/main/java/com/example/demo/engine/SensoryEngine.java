@@ -40,7 +40,7 @@ public class SensoryEngine {
 
         for (GrainItem item : recipe.getGrainItems()) {
             double weightLbs = item.weightKg() * KG_TO_LBS;
-            mcu += (weightLbs * item.grain().lovibond()) / batchSizeGallons;
+            mcu += (weightLbs * item.grain().getLovibond()) / batchSizeGallons;
         }
 
         if (mcu <= 0) return 0;

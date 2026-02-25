@@ -32,12 +32,17 @@ public class BrewingController {
     @PostMapping("/simulate")
     public SimulationResponseDto runSimulation(@RequestBody SimulationRequestDto request) {
         
-        // 1. 프론트에서 온 심플한 요청을 바탕으로, 텅 빈 새 레시피 생성
         Recipe recipe = new Recipe(request.getBatchSizeLiters(), request.getEfficiency());
 
-        // 2. Repository에서 '진짜 스펙'을 꺼내서 레시피에 조립! (핵심)
+        // 레시피 조립 위치
         for (SimulationRequestDto.GrainRequest g : request.getGrains()) {
-            recipe.addMalt(grainRepo.findByName(g.getName()), g.getWeightKg());
+            //recipe.addMalt(grainRepo.findByName(g.getName()), g.getWeightKg());
+        
+        	Grain grain = grainRepo.findByName(g.getName())
+                    .orElseThrow(() -> new IllegalArgumentException("DB에 없는 몰트입니다: " + g.getName()));
+            
+            recipe.addMalt(grain, g.getWeightKg());
+        
         }
         
         for (SimulationRequestDto.HopRequest h : request.getHops()) {

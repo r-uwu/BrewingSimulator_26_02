@@ -80,7 +80,7 @@ public class FlavorAnalyzer {
 
         for (GrainItem item : recipe.getGrainItems()) {
             // 이름으로 유추 , 추후에 Grain 객체에 Type enum으로 정확성 높힐 예정
-            String name = item.grain().name().toLowerCase();
+            String name = item.grain().getName().toLowerCase();
             if (name.contains("roasted") || name.contains("chocolate") || name.contains("black")) {
                 roastWeight += item.weightKg();
             }
@@ -125,7 +125,7 @@ public class FlavorAnalyzer {
         // 아니면 양조 과정 중 생성되거나 발효시 박테리아 감염으로도 디세틸 설파이트 발생. 맥락은 위에랑 같음
         // 보리에서 생성되는 이취로 밝은 보리나 덜 가공된 맥아에서 많이 발생
         boolean hasPilsner = recipe.getGrainItems().stream()
-                .anyMatch(g -> g.grain().name().toLowerCase().contains("pilsner"));
+                .anyMatch(g -> g.grain().getName().toLowerCase().contains("pilsner"));
 
         // 레시피의 최대 홉 끓임 시간을 전체 보일링 타임으로 추정
         int maxBoilTime = recipe.getHopItems().stream()
