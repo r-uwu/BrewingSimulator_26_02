@@ -11,21 +11,36 @@ import com.example.demo.simulation.TemperatureSchedule;
 import com.example.demo.simulation.DryHopAddition;
 
 @Data
-@NoArgsConstructor // Spring(Jackson)이 JSON을 자바 객체로 변환할 때 필수입니다.
+@NoArgsConstructor
 public class SimulationRequestDto {
-
-    // 1. 시뮬레이션 기간 (일)
+    private double batchSizeLiters;
+    private double efficiency;
     private int durationDays;
-
-    // 2. 맥주 레시피 정보 (몰트, 끓임용 홉, 효모 등)
-    private Recipe recipe;
-
-    // 3. 발효 온도 변화 스케줄
+    
+    private List<GrainRequest> grains;
+    private List<HopRequest> hops;
+    private YeastRequest yeast;
+    private List<DryHopRequest> dryHops;
     private TemperatureSchedule tempSchedule;
 
-    // 4. 드라이호핑 (발효 중 홉 투입) 일정
-    // 🌟 프론트엔드에서 드라이호핑 데이터를 안 보냈을 때(null) 발생하는 에러를 막기 위해
-    // 기본값으로 텅 빈 리스트(new ArrayList<>())를 쥐여줍니다.
-    private List<DryHopAddition> dryHopAdditions = new ArrayList<>();
-
+    // 내부 DTO 클래스들
+    // 프론트엔드에서 이름과 양만 받음
+    @Data public static class GrainRequest {
+        private String name;
+        private double weightKg;
+    }
+    @Data public static class HopRequest {
+        private String name;
+        private double amountGrams;
+        private int boilTimeMinutes;
+    }
+    @Data public static class YeastRequest {
+        private String name;
+        private double amount;
+    }
+    @Data public static class DryHopRequest {
+        private int hour;
+        private String name;
+        private double amountGrams;
+    }
 }
