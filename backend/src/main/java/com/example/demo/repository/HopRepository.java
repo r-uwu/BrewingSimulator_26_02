@@ -14,7 +14,7 @@ import com.example.demo.domain.Hop;
 @Repository
 public interface HopRepository extends JpaRepository<Hop, Long> {
     
-    Optional<Hop> findByname(String name);
+    Optional<Hop> findByName(String name);
 
 }
 /*

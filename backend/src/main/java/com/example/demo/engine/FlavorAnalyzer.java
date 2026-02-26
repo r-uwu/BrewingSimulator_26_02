@@ -28,7 +28,7 @@ public class FlavorAnalyzer {
      * @param fermentTemp 발효 온도 (이취 분석용)
      */
     public FlavorProfile analyze(Recipe recipe, double og, double ibu, double fermentTemp) {
-        Yeast yeast = recipe.getYeastItem().yeast();
+        Yeast yeast = recipe.getYeastItem().getYeast();
         List<String> tags = new ArrayList<>();
 
         //태그용 스코어
@@ -71,7 +71,7 @@ public class FlavorAnalyzer {
 
     private void analyzeIngredientIntensity(Recipe recipe, List<String> tags) {
         double batchSize = recipe.getBatchSizeLiters();
-        double totalGrainWeight = recipe.getGrainItems().stream().mapToDouble(GrainItem::weightKg).sum();
+        double totalGrainWeight = recipe.getGrainItems().stream().mapToDouble(GrainItem::getWeightKg).sum();
 
         // 몰트 구성 비율 분석
         double roastWeight = 0;
@@ -79,12 +79,12 @@ public class FlavorAnalyzer {
 
         for (GrainItem item : recipe.getGrainItems()) {
             // 이름으로 유추 , 추후에 Grain 객체에 Type enum으로 정확성 높힐 예정
-            String name = item.grain().getName().toLowerCase();
+            String name = item.getGrain().getName().toLowerCase();
             if (name.contains("roasted") || name.contains("chocolate") || name.contains("black")) {
-                roastWeight += item.weightKg();
+                roastWeight += item.getWeightKg();
             }
             if (name.contains("crystal") || name.contains("caramel")) {
-                crystalWeight += item.weightKg();
+                crystalWeight += item.getWeightKg();
             }
         }
 
@@ -97,7 +97,7 @@ public class FlavorAnalyzer {
             }
         }
 
-        double totalHopGrams = recipe.getHopItems().stream().mapToDouble(HopItem::amountGrams).sum();
+        double totalHopGrams = recipe.getHopItems().stream().mapToDouble(HopItem::getAmountGrams).sum();
         double hopConcentration = totalHopGrams / batchSize;
 
         if (hopConcentration >= EXTREME_HOP_CONCENTRATION) {
@@ -125,11 +125,11 @@ public class FlavorAnalyzer {
         // 아니면 양조 과정 중 생성되거나 발효시 박테리아 감염으로도 디세틸 설파이트 발생. 맥락은 위에랑 같음
         // 보리에서 생성되는 이취로 밝은 보리나 덜 가공된 맥아에서 많이 발생
         boolean hasPilsner = recipe.getGrainItems().stream()
-                .anyMatch(g -> g.grain().getName().toLowerCase().contains("pilsner"));
+                .anyMatch(g -> g.getGrain().getName().toLowerCase().contains("pilsner"));
 
         // 레시피의 최대 홉 끓임 시간을 전체 보일링 타임으로 추정
         int maxBoilTime = recipe.getHopItems().stream()
-                .mapToInt(HopItem::boilTimeMinutes).max().orElse(0);
+                .mapToInt(HopItem::getBoilTimeMinutes).max().orElse(0);
 
         if (hasPilsner && maxBoilTime < 90) { // 필스너는 90분 권장
             tags.add("⚠\uFE0F DMS");

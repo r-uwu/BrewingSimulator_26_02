@@ -1,8 +1,31 @@
 package com.example.demo.domain;
 
-/**몰트 레시티 구성 정보용
-* 홉 이름, 홉 용량, 홉 보일링 시간(60이면 0분에 투입, 15면 45분에 투입)
- */
-public record HopItem(Hop hop, double amountGrams, int boilTimeMinutes) {
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@Entity
+@Data
+@NoArgsConstructor
+public class HopItem {
+
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recipe_id")
+    private Recipe recipe;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "hop_id")
+    private Hop hop;
+
+    private double amountGrams;
+    private int boilTimeMinutes;
+
+    public HopItem(Hop hop, double amountGrams, int boilTimeMinutes) {
+        this.hop = hop;
+        this.amountGrams = amountGrams;
+        this.boilTimeMinutes = boilTimeMinutes;
+    }
 }

@@ -24,9 +24,9 @@ public class FermentationEngine {
         //double og = calculateOG(recipe);
 
     	YeastItem item = recipe.getYeastItem();       
-        Yeast yeast = item.yeast();
+        Yeast yeast = item.getYeast();
 
-        if(item == null || item.amount() <= 0) return og;
+        if(item == null || item.getAmount() <= 0) return og;
 
         // 온도 민감도에 따른 실제 감쇄율 보정
 //        double stress = calculateYeastStress(yeast, fermentTemp);
@@ -139,16 +139,16 @@ public class FermentationEngine {
     private double calculateViability(YeastItem item) {
 
         double viability = 1.0;
-        int age = item.ageInMonths();
+        int age = item.getAgeInMonths();
 
-        if (item.yeast().getForm() == Yeast.YeastForm.DRY) {
+        if (item.getYeast().getForm() == Yeast.YeastForm.DRY) {
             viability = Math.max(0, 1.0 - (0.016 * age)); // 건조: 월 1.6% 감소
         } else {
             viability = Math.max(0, 1.0 - (0.21 * age));  // 액상: 월 21% 감소
         }
 
         // 1세대 지날 때마다 건강 상태가 5%씩 나빠진다고 가정 (보수적 접근)
-        double generationPenalty = item.timesCultured() * 0.05;
+        double generationPenalty = item.getTimesCultured() * 0.05;
 
         // 재사용 횟수가 너무 많으면(대충 10회 이상) 패널티 증가하는 방식
         double vitalityFactor = Math.max(0, 1.0 - generationPenalty);
@@ -161,11 +161,11 @@ public class FermentationEngine {
      * 2. 실제 살아있는 세포 수(Viable Cells) 계산
      */
     private double calculateViableCells(YeastItem item) {
-        if (item == null || item.amount() <= 0) return 0;
+        if (item == null || item.getAmount() <= 0) return 0;
 
-        double baseCount = (item.yeast().getForm() == Yeast.YeastForm.DRY)
-                ? item.amount() * DRY_YEAST_REAL_CELLS_PER_GRAM
-                : item.amount() * LIQUID_YEAST_REAL_CELLS_PER_PACK; // 액상은 팩 단위 가정
+        double baseCount = (item.getYeast().getForm() == Yeast.YeastForm.DRY)
+                ? item.getAmount() * DRY_YEAST_REAL_CELLS_PER_GRAM
+                : item.getAmount() * LIQUID_YEAST_REAL_CELLS_PER_PACK; // 액상은 팩 단위 가정
 
         // 총 세포 수 * 생존율
         return baseCount * calculateViability(item);
@@ -200,7 +200,7 @@ public class FermentationEngine {
         // Yeast 객체에 접근하기 위해 null 체크
         if (recipe.getYeastItem() == null) return 0;
 
-        Yeast.YeastType type = recipe.getYeastItem().yeast().getType();
+        Yeast.YeastType type = recipe.getYeastItem().getYeast().getType();
         double targetRate;
 
         switch (type) {

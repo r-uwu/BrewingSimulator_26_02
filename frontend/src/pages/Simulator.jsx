@@ -3,6 +3,7 @@ import { useState } from 'react'
 function Simulator() {
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
   const runSimulation = async () => {
     setLoading(true);
@@ -19,7 +20,7 @@ function Simulator() {
         { name: "Magnum", amountGrams: 5.0, boilTimeMinutes: 60 },
         { name: "Citra", amountGrams: 20.0, boilTimeMinutes: 0 }
       ],
-      yeast: { name: "US-05", amount: 11.5 },
+      yeast: { name: "SafAle US-05", amount: 11.5 },
       dryHops: [
         { hour: 48, name: "Citra", amountGrams: 50.0 }
       ],
@@ -44,44 +45,84 @@ function Simulator() {
       const data = await response.json();
       console.log("백엔드 데이터 성공적으로 도착!", data);
       
-      // 🌟 2. 새로 만든 ResponseDto 객체를 그대로 저장
+      //새로 만든 ResponseDto 객체 그대로 저장
       setResult(data);
       
     } catch (error) {
       console.error(error);
-      alert("시뮬레이션 중 오류가 발생했습니다.");
+      alert(error.message);
     } finally {
       setLoading(false);
     }
   }
 
+  const saveRecipe = async () => {
 
+  const recipeName = prompt("저장할 레시피 이름을 입력하세요:", "나의 첫 DDH NEIPA");
+    if (!recipeName) return;
+
+    setIsSaving(true);
+
+    // 시뮬레이션 때 썼던 payload 재활용
+    const payload = {
+      batchSizeLiters: 20.0,
+      efficiency: 0.70,
+      durationDays: 14,
+      grains: [
+        { name: "Pilsner", weightKg: 4.0 },
+        { name: "Wheat", weightKg: 1.0 }
+      ],
+      hops: [
+        { name: "Magnum", amountGrams: 5.0, boilTimeMinutes: 60 },
+        { name: "Citra", amountGrams: 20.0, boilTimeMinutes: 0 }
+      ],
+      yeast: { name: "SafAle US-05", amount: 11.5 },
+      dryHops: [
+        { hour: 48, name: "Citra", amountGrams: 50.0 }
+      ],
+      tempSchedule: {
+        initialTemp: 20.0,
+        steps: [ { hour: 240, targetTemp: 15.0 } ]
+      }
+    };
+
+    try {
+      //방금 백엔드에 만든 /save 엔드포인트로 전송
+      //(?recipeName=파라미터 포함)
+      const response = await fetch(`http://localhost:8080/api/brewing/save?recipeName=${encodeURIComponent(recipeName)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`저장 실패: ${errorText}`);
+      }
+      
+      const msg = await response.text();
+      alert(msg);
+      
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    } finally {
+      setIsSaving(false);
+    }
+
+  }
 
 
   
 
   return (
 
-    
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
     <div style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '900px', margin: '0 auto' }}>
       <h1>🍺 스마트 브루잉 시뮬레이터</h1>
       <p>버튼을 눌러 14일간의 발효 과정을 시뮬레이션 하세요.</p>
-      
+
+
+      <div style={{ display: 'flex', gap: '10px' }}>
       <button 
         onClick={runSimulation}
         disabled={loading}
@@ -89,6 +130,19 @@ function Simulator() {
       >
         {loading ? '계산 중...' : '🚀 DDH NEIPA 시뮬레이션 돌리기'}
       </button>
+
+      
+        <button 
+          onClick={saveRecipe}
+          disabled={loading || isSaving}
+          style={{ padding: '12px 24px', fontSize: '16px', cursor: (loading || isSaving) ? 'wait' : 'pointer', backgroundColor: isSaving ? '#7f8c8d' : '#2ecc71', border: 'none', borderRadius: '5px', color: 'white', fontWeight: 'bold' }}
+        >
+          {isSaving ? '저장 중...' : '💾 DB에 레시피 저장하기'}
+        </button>
+
+        </div>
+
+
 
       <hr style={{ margin: '30px 0', border: '1px solid #eee' }}/>
 

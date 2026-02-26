@@ -12,6 +12,7 @@ import com.example.demo.engine.BrewCalculator;
 import com.example.demo.engine.FermentationEngine;
 import com.example.demo.repository.GrainRepository;
 import com.example.demo.repository.HopRepository;
+import com.example.demo.repository.RecipeRepository;
 import com.example.demo.repository.YeastRepository;
 import com.example.demo.service.BrewingSimulator;
 import com.example.demo.simulation.DryHopAddition;
@@ -20,7 +21,7 @@ import com.example.demo.simulation.SimulationLog;
 @CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/api/brewing")
-@RequiredArgsConstructor // 🌟 필수: final이 붙은 부품(Bean)들을 자동으로 연결해 줍니다.
+@RequiredArgsConstructor // final이 붙은 부품(Bean)들을 자동으로 연결
 public class BrewingController {
 
     private final BrewingSimulator brewingSimulator;
@@ -29,6 +30,7 @@ public class BrewingController {
     private final HopRepository hopRepo;
     private final YeastRepository yeastRepo;
     private final FermentationEngine fermEngine;
+    private final RecipeRepository recipeRepo;
 
     @PostMapping("/simulate")
     public SimulationResponseDto runSimulation(@RequestBody SimulationRequestDto request) {
@@ -48,8 +50,8 @@ public class BrewingController {
         
         for (SimulationRequestDto.HopRequest h : request.getHops()) {
             //recipe.addHop(hopRepo.findByName(h.getName()), h.getAmountGrams(), h.getBoilTimeMinutes());
-        	Hop hop = hopRepo.findByname(h.getName())
-        			.orElseThrow(() -> new IllegalArgumentException("DB에 없는 몰트입니다: " + h.getName()));
+        	Hop hop = hopRepo.findByName(h.getName())
+        			.orElseThrow(() -> new IllegalArgumentException("DB에 없는 홉입니다: " + h.getName()));
         	recipe.addHop(hop, h.getAmountGrams(), h.getBoilTimeMinutes());
         }
         
@@ -70,10 +72,9 @@ public class BrewingController {
         double og = calculator.calculateOG(recipe);
         double ibu = calculator.calculateIBU(recipe);
         double srm = calculator.calculateSRM(recipe);
-        
-        FermentationEngine tempFermEngine = new FermentationEngine();
-        double targetFG = tempFermEngine.calculateFG(recipe, og, yeast.getMaxTemp(), 65.0);
-        double estABV = tempFermEngine.calculateABV(og, targetFG);
+
+        double targetFG = fermEngine.calculateFG(recipe, og, yeast.getMaxTemp(), 65.0);
+        double estABV = fermEngine.calculateABV(og, targetFG);
 
         double gravityUnits = (og > 1.0) ? (og - 1.0) * 1000.0 : 0.0;
         double buGuRatio = (gravityUnits > 0) ? (ibu / gravityUnits) : 0.0;
@@ -99,5 +100,37 @@ public class BrewingController {
         response.setLogs(logs);
 
         return response;
+    }
+    
+    
+    
+    @PostMapping("/save")
+    public String saveRecipe(@RequestBody SimulationRequestDto request, 
+                             @RequestParam(defaultValue = "My Awesome Beer") String recipeName) {
+        
+        Recipe recipe = new Recipe(request.getBatchSizeLiters(), request.getEfficiency());
+        recipe.setName(recipeName);
+
+        for (SimulationRequestDto.GrainRequest g : request.getGrains()) {
+            Grain grain = grainRepo.findByName(g.getName())
+                    .orElseThrow(() -> new IllegalArgumentException("DB에 없는 몰트: " + g.getName()));
+            recipe.addMalt(grain, g.getWeightKg());
+        }
+        
+        for (SimulationRequestDto.HopRequest h : request.getHops()) {
+            Hop hop = hopRepo.findByName(h.getName())
+                    .orElseThrow(() -> new IllegalArgumentException("DB에 없는 홉: " + h.getName()));
+            recipe.addHop(hop, h.getAmountGrams(), h.getBoilTimeMinutes());
+        }
+
+        Yeast realYeast = yeastRepo.findByName(request.getYeast().getName())
+                .orElseThrow(() -> new IllegalArgumentException("DB에 없는 효모: " + request.getYeast().getName()));
+        recipe.setYeastItem(new YeastItem(realYeast, request.getYeast().getAmount(), true, 0, 0, false));
+
+        //DB에 영구 저장! (Cascade)
+        //레시피 하나만 save() 해도 그 안에 달린 GrainItem, HopItem, YeastItem이 각자 테이블에 알아서 저장됩니다.
+        recipeRepo.save(recipe);
+
+        return "레시피 [" + recipeName + "] 저장했습니다.";
     }
 }

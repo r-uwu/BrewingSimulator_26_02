@@ -1,8 +1,29 @@
 package com.example.demo.domain;
 
-/** 몰트 레시티 구성 정보용
- * @param grain 곡물 정보
- * @param weightKg 투입량 (kg)
- */
-public record GrainItem(Grain grain, double weightKg) {
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Data
+@NoArgsConstructor
+public class GrainItem {
+
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recipe_id")
+    private Recipe recipe;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "grain_id")
+    private Grain grain;
+
+    private double weightKg;
+
+    public GrainItem(Grain grain, double weightKg) {
+        this.grain = grain;
+        this.weightKg = weightKg;
+    }
 }

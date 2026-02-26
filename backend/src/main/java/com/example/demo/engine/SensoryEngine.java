@@ -13,8 +13,8 @@ public class SensoryEngine {
 
         for (var item : recipe.getHopItems()) {
 
-            double utilization = calculateUtilization(item.boilTimeMinutes(), og);
-            double ibu = (item.amountGrams() * item.hop().getAlphaAcid() * 10 * utilization) / recipe.getBatchSizeLiters();
+            double utilization = calculateUtilization(item.getBoilTimeMinutes(), og);
+            double ibu = (item.getAmountGrams() * item.getHop().getAlphaAcid() * 10 * utilization) / recipe.getBatchSizeLiters();
 
             totalIbu += ibu;
         }
@@ -39,8 +39,8 @@ public class SensoryEngine {
         double batchSizeGallons = recipe.getBatchSizeLiters() * LITER_TO_GALLONS;
 
         for (GrainItem item : recipe.getGrainItems()) {
-            double weightLbs = item.weightKg() * KG_TO_LBS;
-            mcu += (weightLbs * item.grain().getLovibond()) / batchSizeGallons;
+            double weightLbs = item.getWeightKg() * KG_TO_LBS;
+            mcu += (weightLbs * item.getGrain().getLovibond()) / batchSizeGallons;
         }
 
         if (mcu <= 0) return 0;

@@ -43,7 +43,7 @@ public class BrewingSimulator {
         final double startOG = currentGravity;
 
         // 목표 지점(TargetFG) 계산
-        double optimalTemp = recipe.getYeastItem().yeast().getMaxTemp();
+        double optimalTemp = recipe.getYeastItem().getYeast().getMaxTemp();
         double targetFG = fermentationEngine.calculateFG(recipe, startOG, optimalTemp, 65.0);
 
 
@@ -61,7 +61,7 @@ public class BrewingSimulator {
             double currentTemp = tempSchedule.getTempAt(hour);
 
             // 비중
-            double drop = calculateHourlyDrop(hour, currentGravity, targetFG, currentTemp, recipe.getYeastItem().yeast());
+            double drop = calculateHourlyDrop(hour, currentGravity, targetFG, currentTemp, recipe.getYeastItem().getYeast());
             if (drop < 0) drop = 0;
             currentGravity -= drop;
 
@@ -163,12 +163,12 @@ public class BrewingSimulator {
         logs.add(new SimulationLog(-60, 100.0, mashGravity + 0.005, 0.0, "Boil Start", List.of("Sterilization"), 0, 0));
 
         recipe.getHopItems().stream()
-                .sorted((h1, h2) -> Integer.compare(h2.boilTimeMinutes(), h1.boilTimeMinutes()))
+                .sorted((h1, h2) -> Integer.compare(h2.getBoilTimeMinutes(), h1.getBoilTimeMinutes()))
                 .forEach(hop -> {
-                    int logTime = -hop.boilTimeMinutes();
+                    int logTime = -hop.getBoilTimeMinutes();
                     logs.add(new SimulationLog(logTime, 100.0, 0, 0,
-                            "Hop Addition: " + hop.hop().getName(),
-                            List.of(hop.amountGrams() + "g added"), 0, 0));
+                            "Hop Addition: " + hop.getHop().getName(),
+                            List.of(hop.getAmountGrams() + "g added"), 0, 0));
                 });
 
         //월풀

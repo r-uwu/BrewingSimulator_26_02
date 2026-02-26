@@ -28,9 +28,9 @@ public class RecipePreparationService {
             List<GrainItem> grains = recipe.getGrainItems().stream()
                 .map(item -> new GrainItem(
                         //grainRepo.findByName(item.grain().getName()),
-                		grainRepo.findByName(item.grain().getName())
-                        .orElseThrow(() -> new RuntimeException("몰트를 찾을 수 없습니다: " + item.grain().getName())),
-                        item.weightKg()
+                		grainRepo.findByName(item.getGrain().getName())
+                        .orElseThrow(() -> new RuntimeException("몰트를 찾을 수 없습니다: " + item.getGrain().getName())),
+                        item.getWeightKg()
                 )).collect(Collectors.toList());
             
             recipe.getGrainItems().clear();
@@ -40,28 +40,28 @@ public class RecipePreparationService {
         if (recipe.getHopItems() != null) {
             List<HopItem> hops = recipe.getHopItems().stream()
                 .map(item -> new HopItem(
-                        hopRepo.findByName(item.hop().getName())
-                        .orElseThrow(() -> new RuntimeException("홉을 찾을 수 없습니다: " + item.hop().getName())),
-                        item.amountGrams(),
-                        item.boilTimeMinutes()
+                        hopRepo.findByName(item.getHop().getName())
+                        .orElseThrow(() -> new RuntimeException("홉을 찾을 수 없습니다: " + item.getHop().getName())),
+                        item.getAmountGrams(),
+                        item.getBoilTimeMinutes()
                 )).collect(Collectors.toList());
             
             recipe.getHopItems().clear();
             recipe.getHopItems().addAll(hops);
         }
 
-        if (recipe.getYeastItem() != null && recipe.getYeastItem().yeast() != null) {
-        	Yeast yeast = yeastRepo.findByName(recipe.getYeastItem().yeast().getName())
-                    .orElseThrow(() -> new RuntimeException("효모를 찾을 수 없습니다: " + recipe.getYeastItem().yeast().getName()));
+        if (recipe.getYeastItem() != null && recipe.getYeastItem().getYeast() != null) {
+        	Yeast yeast = yeastRepo.findByName(recipe.getYeastItem().getYeast().getName())
+                    .orElseThrow(() -> new RuntimeException("효모를 찾을 수 없습니다: " + recipe.getYeastItem().getYeast().getName()));
             YeastItem incoming = recipe.getYeastItem();
             
             recipe.setYeastItem(new YeastItem(
                     yeast,
-                    incoming.amount(),
-                    incoming.amountIsWeight(),
-                    incoming.timesCultured(),
-                    incoming.ageInMonths(),
-                    incoming.addToSecondary()
+                    incoming.getAmount(),
+                    incoming.isAmountIsWeight(),
+                    incoming.getTimesCultured(),
+                    incoming.getAgeInMonths(),
+                    incoming.isAddToSecondary()
             ));
         }
 
