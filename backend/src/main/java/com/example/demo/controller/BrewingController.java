@@ -28,6 +28,7 @@ public class BrewingController {
     private final GrainRepository grainRepo;
     private final HopRepository hopRepo;
     private final YeastRepository yeastRepo;
+    private final FermentationEngine fermEngine;
 
     @PostMapping("/simulate")
     public SimulationResponseDto runSimulation(@RequestBody SimulationRequestDto request) {
@@ -42,34 +43,38 @@ public class BrewingController {
                     .orElseThrow(() -> new IllegalArgumentException("DB에 없는 몰트입니다: " + g.getName()));
             
             recipe.addMalt(grain, g.getWeightKg());
-        
         }
+        
         
         for (SimulationRequestDto.HopRequest h : request.getHops()) {
-            recipe.addHop(hopRepo.findByName(h.getName()), h.getAmountGrams(), h.getBoilTimeMinutes());
+            //recipe.addHop(hopRepo.findByName(h.getName()), h.getAmountGrams(), h.getBoilTimeMinutes());
+        	Hop hop = hopRepo.findByname(h.getName())
+        			.orElseThrow(() -> new IllegalArgumentException("DB에 없는 몰트입니다: " + h.getName()));
+        	recipe.addHop(hop, h.getAmountGrams(), h.getBoilTimeMinutes());
         }
         
-        Yeast realYeast = yeastRepo.findByName(request.getYeast().getName());
-        recipe.setYeastItem(new YeastItem(realYeast, request.getYeast().getAmount(), true, 0, 0, false));
+        Yeast yeast = yeastRepo.findByName(request.getYeast().getName())
+        		.orElseThrow(() -> new IllegalArgumentException("DB에 없는 효모입니다: " + request.getYeast().getName()));
+        
+        recipe.setYeastItem(new YeastItem(yeast, request.getYeast().getAmount(), true, 0, 0, false));
 
-        // 3. 드라이호핑 일정 조립
         List<DryHopAddition> dryHopAdditions = new ArrayList<>();
         if (request.getDryHops() != null) {
             for (SimulationRequestDto.DryHopRequest dh : request.getDryHops()) {
-                dryHopAdditions.add(new DryHopAddition(dh.getHour(), hopRepo.findByName(dh.getName()), dh.getAmountGrams()));
+            	Hop dhHop = hopRepo.findByName(dh.getName())
+            			.orElseThrow(() -> new IllegalArgumentException("DB에 없는 드라이홉입니다: " + dh.getName()));
+                dryHopAdditions.add(new DryHopAddition(dh.getHour(), dhHop, dh.getAmountGrams()));
             }
         }
 
-        // 4. 수학 엔진 가동 (이제 0.825가 아니라 정상적인 OG/FG가 나옵니다)
         double og = calculator.calculateOG(recipe);
         double ibu = calculator.calculateIBU(recipe);
         double srm = calculator.calculateSRM(recipe);
         
         FermentationEngine tempFermEngine = new FermentationEngine();
-        double targetFG = tempFermEngine.calculateFG(recipe, og, realYeast.maxTemp(), 65.0);
+        double targetFG = tempFermEngine.calculateFG(recipe, og, yeast.getMaxTemp(), 65.0);
         double estABV = tempFermEngine.calculateABV(og, targetFG);
 
-        // 5. Advanced Stats (테스트 코드에 있던 멋진 수치들)
         double gravityUnits = (og > 1.0) ? (og - 1.0) * 1000.0 : 0.0;
         double buGuRatio = (gravityUnits > 0) ? (ibu / gravityUnits) : 0.0;
         String balance = (buGuRatio > 0.8) ? "Very Bitter / Hoppy" : (buGuRatio > 0.5) ? "Balanced" : "Malty / Sweet";
@@ -78,10 +83,9 @@ public class BrewingController {
         double dryHopRate = totalDryHops / recipe.getBatchSizeLiters();
         double pitchRate = request.getYeast().getAmount() / recipe.getBatchSizeLiters();
 
-        // 6. 시뮬레이션 엔진 가동
         List<SimulationLog> logs = brewingSimulator.simulate(recipe, request.getTempSchedule(), dryHopAdditions, request.getDurationDays());
 
-        // 7. 새로 만든 큼직한 바구니(ResponseDto)에 예쁘게 포장해서 반환
+        //ResponseDto에 반환
         SimulationResponseDto response = new SimulationResponseDto();
         response.setOriginalGravity(og);
         response.setFinalGravity(targetFG);
@@ -92,7 +96,7 @@ public class BrewingController {
         response.setBalanceProfile(balance);
         response.setDryHopRate(dryHopRate);
         response.setPitchRate(pitchRate);
-        response.setLogs(logs); // 로그 리스트도 잊지 않고 담아줍니다!
+        response.setLogs(logs);
 
         return response;
     }

@@ -43,7 +43,7 @@ public class BrewingSimulator {
         final double startOG = currentGravity;
 
         // 목표 지점(TargetFG) 계산
-        double optimalTemp = recipe.getYeastItem().yeast().maxTemp();
+        double optimalTemp = recipe.getYeastItem().yeast().getMaxTemp();
         double targetFG = fermentationEngine.calculateFG(recipe, startOG, optimalTemp, 65.0);
 
 
@@ -94,14 +94,14 @@ public class BrewingSimulator {
                     logs.add(new SimulationLog(
                             hour, currentTemp, currentGravity, currentABV,
                             //"Event: Dry Hop Added",
-                            "Hop Addition: " + dryHopAddition.hop().name(),
+                            "Hop Addition: " + dryHopAddition.hop().getName(),
                             List.of(String.format("+%.1fg %s (IBU +%.2f, TargetFG -%.4f)",
-                                    dryHopAddition.amountGrams(), dryHopAddition.hop().name(), addedIbu, fgDrop)),
+                                    dryHopAddition.amountGrams(), dryHopAddition.hop().getName(), addedIbu, fgDrop)),
                             0, 0
                     ));
 
-                    if (dryHopAddition.hop().flavorTags() != null) {
-                    dryHopTags.addAll(dryHopAddition.hop().flavorTags());
+                    if (dryHopAddition.hop().getFlavorTags() != null) {
+                    dryHopTags.addAll(dryHopAddition.hop().getFlavorTags());
                     }
                 }
             }
@@ -167,7 +167,7 @@ public class BrewingSimulator {
                 .forEach(hop -> {
                     int logTime = -hop.boilTimeMinutes();
                     logs.add(new SimulationLog(logTime, 100.0, 0, 0,
-                            "Hop Addition: " + hop.hop().name(),
+                            "Hop Addition: " + hop.hop().getName(),
                             List.of(hop.amountGrams() + "g added"), 0, 0));
                 });
 
@@ -188,9 +188,9 @@ public class BrewingSimulator {
         double tempActivity = Math.pow(q10, (temp - baseTemp) / 10.0);
 
         // 효모 생존 한계 패널티
-        if (temp < yeast.minTemp()) {
+        if (temp < yeast.getMinTemp()) {
             tempActivity *= 0.15;
-        } else if (temp > yeast.maxTemp() + 5) {
+        } else if (temp > yeast.getMaxTemp() + 5) {
             tempActivity = 0.0;
         }
 

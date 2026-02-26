@@ -10,7 +10,6 @@ import com.example.demo.domain.GrainItem;
 import com.example.demo.domain.HopItem;
 import com.example.demo.domain.Recipe;
 import com.example.demo.domain.Yeast;
-import com.example.demo.domain.enums.YeastType;
 
 @Component
 public class FlavorAnalyzer {
@@ -21,10 +20,10 @@ public class FlavorAnalyzer {
     private static final double HIGH_ROAST_PERCENTAGE = 0.10; // 전체 곡물 중 10% 이상이 로스팅 몰트
     private static final double HIGH_CRYSTAL_PERCENTAGE = 0.20; // 20% 이상이 카라멜 몰트 (달고 끈적임 위험)
 
-    /**
+    /** 
      * 종합 풍미 및 결함 분석
      * @param recipe 레시피 (재료 정보)
-     * @param og 초기 비중 (Gravity Units 계산용)
+     * @par am og 초기 비중 (Gravity Units 계산용)
      * @param ibu 쓴맛 수치 (BU:GU 비율 계산용)
      * @param fermentTemp 발효 온도 (이취 분석용)
      */
@@ -74,7 +73,7 @@ public class FlavorAnalyzer {
         double batchSize = recipe.getBatchSizeLiters();
         double totalGrainWeight = recipe.getGrainItems().stream().mapToDouble(GrainItem::weightKg).sum();
 
-        // A. 몰트 구성 비율 분석
+        // 몰트 구성 비율 분석
         double roastWeight = 0;
         double crystalWeight = 0;
 
@@ -113,10 +112,11 @@ public class FlavorAnalyzer {
      * 공정 실수나 재료 조합 오류로 인한 오프플레이버에 대한 예측
      */
     private void analyzeOffFlavors(Recipe recipe, Yeast yeast, double temp, double diacetylRisk, List<String> tags) {
-        // 퓨젤 알코올 (Fusel Alcohol) - 꽃향기 같으면서도 아세톤/벤젠 냄새
+
+    	// 퓨젤 알코올 (Fusel Alcohol) - 꽃향기 같으면서도 아세톤/벤젠 냄새
         // 발효 온도가 효모 권장 온도보다 훨씬 높을 때 발생 / 혹은 질소 과다
         // 초반 발효 유의
-        if (temp > yeast.maxTemp() + 4.0) {
+        if (temp > yeast.getMaxTemp() + 4.0) {
             tags.add("⚠\uFE0F Fusel Alcohol");
         }
 
@@ -138,7 +138,7 @@ public class FlavorAnalyzer {
 
         // 아세트알데히드 (Acetaldehyde) - 풋사과, 아세톤 등
         // 발효 온도가 너무 낮아 효모 활동이 조기 종료되거나, 피칭량이 부족할 때 (여기선 온도만 체크)
-        if (temp < yeast.minTemp() - 2.0) {
+        if (temp < yeast.getMinTemp() - 2.0) {
             tags.add("⚠\uFE0F Green Apple (Acetaldehyde)");
         }
 
@@ -170,42 +170,67 @@ public class FlavorAnalyzer {
     }
 
     private void analyzeYeastCharacter(Yeast yeast, double temp, double ester, List<String> tags) {
+    	
+    	Yeast.YeastType type = yeast.getType();
+    	
         //double ester = calculateEsterScore(yeast, temp);
 
-        if (yeast.type() == YeastType.LAGER) {
-            if (temp > 18.0) tags.add("Steam Beer Character"); // 캘리포니아 커먼 등
-        } else if (yeast.type() == YeastType.WHEAT) {
-            if (ester > 50) tags.addAll(List.of("Banana", "Clove"));
+//        if (yeast.type() == YeastType.LAGER) {
+//            if (temp > 18.0) tags.add("Steam Beer Character"); // 캘리포니아 커먼 등
+//        } else if (yeast.type() == YeastType.WHEAT) {
+//            if (ester > 50) tags.addAll(List.of("Banana", "Clove"));
+//        }
+    	
+    	switch (type) {
+        case GERMAN_LAGER, CZECH_LAGER -> {
+            if (temp > 18.0) tags.add("Steam Beer Character (Fruity Lager)");
         }
+        case GERMAN_WHEAT -> {
+            if (ester > 50) tags.addAll(List.of("Banana", "Clove"));
+            else tags.add("Subtle Wheat Character");
+        }
+        case BELGIAN_ALE, SAISON -> {
+            if (ester > 40) tags.addAll(List.of("Spicy/Phenolic", "Complex Fruity"));
+        }
+        case KVEIK -> {
+            if (temp > 30.0) tags.addAll(List.of("Orange Citrus", "Clean High-Temp"));
+        }
+        case BRITISH_ALE -> {
+            if (ester > 40) tags.add("Fruity English Esters");
+        }
+        default -> {
+            // AMERICAN_ALE 등은 특별한 에스테르가 없으면 클린한 프로필 유지
+        }
+    }
     }
 
     private double calculateEsterScore(Yeast yeast, double temp) {
         //에스테르 생성 거의 없음
-        if (temp < yeast.minTemp()) return 5.0;
+        if (temp < yeast.getMinTemp()) return 5.0;
 
-        double range = yeast.maxTemp() - yeast.minTemp();
-        double position = (temp - yeast.minTemp()) / range;
+        double range = yeast.getMaxTemp() - yeast.getMinTemp();
+        double position = (temp - yeast.getMinTemp()) / range;
 
         // 공식: (온도 위치 * 100) * 민감도 가중치 , 온도가 maxTemp를 넘어가면 수치가 100을 초과하게 설계 (과도한 에스테르)
-        return Math.max(0, position * 100 * (1 + yeast.sensitivityFactor()));
+        return Math.max(0, position * 100 * (1 + yeast.getSensitivityFactor()));
     }
 
     private double calculateDiacetylRisk(Yeast yeast, double temp) {
         double risk = 0;
+        
+        boolean isLager = (yeast.getType() == Yeast.YeastType.GERMAN_LAGER || yeast.getType() == Yeast.YeastType.CZECH_LAGER);
 
-        if (yeast.type() == YeastType.LAGER && temp < yeast.minTemp() + 2) {
+        if (isLager && temp < yeast.getMinTemp() + 2) {
             risk += 40;
         }
 
         // 효모 스트레스
-        if (temp < yeast.minTemp() || temp > yeast.maxTemp()) {
-            double deviation = Math.abs(temp - ((yeast.minTemp() + yeast.maxTemp()) / 2));
-            risk += deviation * yeast.sensitivityFactor() * 10;
+        if (temp < yeast.getMinTemp() || temp > yeast.getMaxTemp()) {
+            double deviation = Math.abs(temp - ((yeast.getMinTemp() + yeast.getMaxTemp()) / 2));
+            risk += deviation * yeast.getSensitivityFactor() * 10;
         }
 
         return Math.min(100, risk);
     }
-
-
 
 }

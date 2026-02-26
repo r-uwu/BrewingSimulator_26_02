@@ -56,7 +56,7 @@ public class FermentationPhysics {
     private double calculateTemperatureFactor(double temp, Yeast yeast) {
         // A. 효모 생존 한계 (Thermal Death / Dormancy)
         // 너무 뜨거우면 효모 사멸 (활성도 0)
-        if (temp > yeast.maxTemp() + 15.0) return 0.0;
+        if (temp > yeast.getMaxTemp() + 15.0) return 0.0;
 
         // 너무 차가우면 동면 (활성도 0에 근접)
         // 물이 어는점(0도) 근처에서는 대사 정지
@@ -70,9 +70,9 @@ public class FermentationPhysics {
 
         // C. 효모별 적정 온도 페널티 (Strain Specific)
         // 에일 효모를 10도에 두면, Q10 법칙보다 더 급격하게 활동이 둔화됨
-        if (temp < yeast.minTemp()) {
+        if (temp < yeast.getMinTemp()) {
             // 적정 온도보다 낮을수록 효율 급감 (Sigmoid Penalty)
-            double gap = yeast.minTemp() - temp;
+            double gap = yeast.getMinTemp() - temp;
             factor *= Math.max(0, 1.0 - (gap * 0.15)); // 1도 낮을 때마다 15%씩 추가 감소
         }
 

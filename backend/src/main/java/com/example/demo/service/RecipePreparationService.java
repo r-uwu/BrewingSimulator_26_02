@@ -40,7 +40,8 @@ public class RecipePreparationService {
         if (recipe.getHopItems() != null) {
             List<HopItem> hops = recipe.getHopItems().stream()
                 .map(item -> new HopItem(
-                        hopRepo.findByName(item.hop().name()), 
+                        hopRepo.findByName(item.hop().getName())
+                        .orElseThrow(() -> new RuntimeException("홉을 찾을 수 없습니다: " + item.hop().getName())),
                         item.amountGrams(),
                         item.boilTimeMinutes()
                 )).collect(Collectors.toList());
@@ -50,7 +51,8 @@ public class RecipePreparationService {
         }
 
         if (recipe.getYeastItem() != null && recipe.getYeastItem().yeast() != null) {
-            Yeast yeast = yeastRepo.findByName(recipe.getYeastItem().yeast().name());
+        	Yeast yeast = yeastRepo.findByName(recipe.getYeastItem().yeast().getName())
+                    .orElseThrow(() -> new RuntimeException("효모를 찾을 수 없습니다: " + recipe.getYeastItem().yeast().getName()));
             YeastItem incoming = recipe.getYeastItem();
             
             recipe.setYeastItem(new YeastItem(
@@ -67,7 +69,8 @@ public class RecipePreparationService {
             List<DryHopAddition> dryHops = dryHopAdditions.stream()
                 .map(dh -> new DryHopAddition(
                         dh.hour(),
-                        hopRepo.findByName(dh.hop().name()),
+                        hopRepo.findByName(dh.hop().getName())
+                        .orElseThrow(() -> new RuntimeException("드라이홉을 찾을 수 없습니다: " + dh.hop().getName())),
                         dh.amountGrams()
                 )).collect(Collectors.toList());
             

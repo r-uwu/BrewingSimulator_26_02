@@ -14,7 +14,7 @@ public class SensoryEngine {
         for (var item : recipe.getHopItems()) {
 
             double utilization = calculateUtilization(item.boilTimeMinutes(), og);
-            double ibu = (item.amountGrams() * item.hop().alphaAcid() * 10 * utilization) / recipe.getBatchSizeLiters();
+            double ibu = (item.amountGrams() * item.hop().getAlphaAcid() * 10 * utilization) / recipe.getBatchSizeLiters();
 
             totalIbu += ibu;
         }

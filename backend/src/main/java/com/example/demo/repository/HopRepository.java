@@ -4,19 +4,20 @@ package com.example.demo.repository;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import com.example.demo.domain.Hop;
 
 @Repository
-public class HopRepository {
-    private final Map<String, Hop> hopDb = new HashMap<>();
+public interface HopRepository extends JpaRepository<Hop, Long> {
+    
+    Optional<Hop> findByname(String name);
 
-    public HopRepository() {
-        initData();
-    }
-
+}
+/*
     private void initData() {
 
 // --- [독일/유럽] 노블 홉 (전통적인 라거 및 벨기에 맥주용) ---
@@ -63,18 +64,5 @@ public class HopRepository {
         // --- [일본] 개성 강한 특수 홉 ---
         addHop("Sorachi Ace", 13.0, List.of("Lemon", "Dill", "Coriander", "Cymbopogon"));
     }
+    */
 
-    private void addHop(String name, double alpha, List<String> tags) {
-        hopDb.put(name, new Hop(name, alpha, tags));
-    }
-
-
-
-    public Hop findByName(String name) {
-        Hop hop = hopDb.get(name);
-        if (hop == null) {
-            throw new IllegalArgumentException("해당 이름의 홉을 찾을 수 없습니다: " + name);
-        }
-        return hop;
-    }
-}

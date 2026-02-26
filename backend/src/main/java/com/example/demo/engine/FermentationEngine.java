@@ -4,8 +4,7 @@ import org.springframework.stereotype.Component;
 import com.example.demo.domain.Recipe;
 import com.example.demo.domain.Yeast;
 import com.example.demo.domain.YeastItem;
-import com.example.demo.domain.enums.YeastForm;
-import com.example.demo.domain.enums.YeastType;
+
 
 @Component
 public class FermentationEngine {
@@ -23,8 +22,9 @@ public class FermentationEngine {
 
     public double calculateFG(Recipe recipe, double og, double fermentTemp, double mashTemp) {
         //double og = calculateOG(recipe);
-        Yeast yeast = recipe.getYeastItem().yeast();
-        YeastItem item = recipe.getYeastItem();
+
+    	YeastItem item = recipe.getYeastItem();       
+        Yeast yeast = item.yeast();
 
         if(item == null || item.amount() <= 0) return og;
 
@@ -44,10 +44,10 @@ public class FermentationEngine {
 
         // 당화 온도에 따른 효모 스펙 보정, 효모가 아무리 건강해도, 70도에서 당화하면 먹을 게 없어서 FG가 안 떨어짐
         double mashCorrection = calculateMashFactor(mashTemp);
-        double potentialAttenuation = yeast.attenuation() + mashCorrection;
+        double potentialAttenuation = yeast.getAttenuation() + mashCorrection;
 
         // 온도 스트레스
-        double tempStress = calculateYeastStress(yeast, fermentTemp) * yeast.sensitivityFactor();
+        double tempStress = calculateYeastStress(yeast, fermentTemp) * yeast.getSensitivityFactor();
 
         // 알코올 내성(Tolerance) 체크
         // 현재 예상되는 ABV가 효모의 한계치(예: 11%)를 넘으면 강제로 발효 중단
@@ -67,7 +67,7 @@ public class FermentationEngine {
 //                - tolerancePenalty;
         // === 종합 감쇄율 계산 ===
         // 기본 감쇄율 * 당화한계 * (피칭효율 * 온도수행률)
-        double attenuation = yeast.attenuation() * mashLimit * (pitchingEfficiency * yeastPerformance);
+        double attenuation = yeast.getAttenuation() * mashLimit * (pitchingEfficiency * yeastPerformance);
 
         // 물리적 한계 설정 (0% ~ 100%)
         attenuation = Math.max(0.0, Math.min(1.0, attenuation));
@@ -99,8 +99,8 @@ public class FermentationEngine {
      * 온도가 Min보다 낮으면 수행률이 '지수 함수적'으로 떡락합니다.
      */
     private double calculateYeastPerformance(Yeast yeast, double fermentTemp) {
-        double min = yeast.minTemp();
-        double max = yeast.maxTemp();
+        double min = yeast.getMinTemp();
+        double max = yeast.getMaxTemp();
 
         // Case A: 최적 범위 안 (Best Condition)
         if (fermentTemp >= min && fermentTemp <= max) {
@@ -114,7 +114,7 @@ public class FermentationEngine {
             // Sigmoid 형태의 급격한 감소 적용
             // 예: 1도 낮음 -> 90%, 3도 낮음 -> 50%, 5도 낮음 -> 10%
             // 공식: 1 / (1 + e^(gap - tolerance)) 변형
-            double penalty = Math.pow(gap, 2.5) * yeast.sensitivityFactor() * 0.5;
+            double penalty = Math.pow(gap, 2.5) * yeast.getSensitivityFactor() * 0.5;
             return Math.max(0.1, 1.0 - penalty);
         }
 
@@ -141,7 +141,7 @@ public class FermentationEngine {
         double viability = 1.0;
         int age = item.ageInMonths();
 
-        if (item.yeast().form() == YeastForm.DRY) {
+        if (item.yeast().getForm() == Yeast.YeastForm.DRY) {
             viability = Math.max(0, 1.0 - (0.016 * age)); // 건조: 월 1.6% 감소
         } else {
             viability = Math.max(0, 1.0 - (0.21 * age));  // 액상: 월 21% 감소
@@ -163,7 +163,7 @@ public class FermentationEngine {
     private double calculateViableCells(YeastItem item) {
         if (item == null || item.amount() <= 0) return 0;
 
-        double baseCount = (item.yeast().form() == YeastForm.DRY)
+        double baseCount = (item.yeast().getForm() == Yeast.YeastForm.DRY)
                 ? item.amount() * DRY_YEAST_REAL_CELLS_PER_GRAM
                 : item.amount() * LIQUID_YEAST_REAL_CELLS_PER_PACK; // 액상은 팩 단위 가정
 
@@ -200,16 +200,22 @@ public class FermentationEngine {
         // Yeast 객체에 접근하기 위해 null 체크
         if (recipe.getYeastItem() == null) return 0;
 
-        YeastType type = recipe.getYeastItem().yeast().type();
+        Yeast.YeastType type = recipe.getYeastItem().yeast().getType();
         double targetRate;
 
-        if (type == YeastType.LAGER) {
+        switch (type) {
+        // 1. 라거 계열 (가장 많은 세포 수 필요)
+        case GERMAN_LAGER, CZECH_LAGER -> 
             targetRate = TARGET_RATE_LAGER;
-        } else if (type == YeastType.ALE || type == YeastType.WHEAT) {
+
+        // 2. 에일 및 밀맥주 계열 (표준 세포 수)
+        case AMERICAN_ALE, BRITISH_ALE, BELGIAN_ALE, SAISON, KVEIK, GERMAN_WHEAT, BELGIAN_WIT -> 
             targetRate = TARGET_RATE_ALE;
-        } else {
-            targetRate = TARGET_RATE_HYBRID; // 그 외
-        }
+
+        // 3. 특수 효모 (브렛, 유산균, 와인 효모 등)
+        default -> 
+            targetRate = TARGET_RATE_HYBRID;
+    }
 
         // 4. 최종 목표 세포 수 반환
         return batchMl * plato * targetRate;
@@ -217,8 +223,8 @@ public class FermentationEngine {
 
 
     private double calculateYeastStress(Yeast yeast, double temp) {
-        if (temp >= yeast.minTemp() && temp <= yeast.maxTemp()) return 0.0;
-        return (temp < yeast.minTemp()) ? (yeast.minTemp() - temp) : (temp - yeast.maxTemp());
+        if (temp >= yeast.getMinTemp() && temp <= yeast.getMaxTemp()) return 0.0;
+        return (temp < yeast.getMinTemp()) ? (yeast.getMinTemp() - temp) : (temp - yeast.getMaxTemp());
     }
 
 

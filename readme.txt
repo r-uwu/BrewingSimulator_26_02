@@ -37,7 +37,7 @@ Spring 이식, 프론트 개발 깃 링크 : https://github.com/r-uwu/BrewingSim
 ---
 
 ┌ㅡㅡㅡㅡㅡㅡㅡㅡ┐
-         즐 겁 다
+       즐 겁 다
 └ㅡㅡㅡㅡㅡㅡㅡㅡ┘
 　　ᕱ ᕱ ||
 　 ( ･ω･ ||
