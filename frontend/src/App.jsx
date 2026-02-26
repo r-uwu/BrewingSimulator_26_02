@@ -1,14 +1,21 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import Home from './pages/Home';
 import Simulator from './pages/Simulator';
+import Card from './components/Card';
 
 function App() {
+
+  
+
+
+
+
   return (
     <BrowserRouter>
       {/*상단 네비 바*/}
 
       <nav style={{ 
-        position: 'fixed', top: 0, left: 0, width: '100vw', 
+        position: 'fixed', top: 0, left: 0, width: '100%', 
         backgroundColor: '#333', padding: '10px 30px', 
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         boxSizing: 'border-box' 
