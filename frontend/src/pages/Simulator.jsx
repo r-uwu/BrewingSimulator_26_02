@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 
 function Simulator() {
   const [result, setResult] = useState(null)
@@ -8,15 +9,9 @@ function Simulator() {
 
   const [dbIngredients, setDbIngredients] = useState({ grains: [], hops: [], yeasts: [] });
 
+  const location = useLocation();
 
-  useEffect(() => {
-    console.log("simul mounted");
-  },[]
-
-
-);
-
- const [recipeData, setRecipeData] = useState({
+  const [recipeData, setRecipeData] = useState({
     batchSizeLiters: 20.0,
     efficiency: 0.73,
         durationDays: 14,
@@ -28,14 +23,33 @@ function Simulator() {
   });
   
 
+  useEffect(() => {
+    if (location.state && location.state.recipe) {
+      const loadedRecipe = location.state.recipe;
+      
+      setRecipeData({
+        batchSizeLiters: loadedRecipe.batchSizeLiters || 20.0,
+        efficiency: 0.73,
+        durationDays: loadedRecipe.durationDays || 14,
+        grains: loadedRecipe.grains && loadedRecipe.grains.length > 0 ? loadedRecipe.grains : [{ name: "", weightKg: 0.0 }],
+        hops: loadedRecipe.hops && loadedRecipe.hops.length > 0 ? loadedRecipe.hops : [{ name: "", amountGrams: 0.0, boilTimeMinutes: 60 }],
+        yeast: loadedRecipe.yeast || { name: "", amount: 0.0 },
+
+        dryHops: loadedRecipe.dryHops ? loadedRecipe.dryHops.map(dh => ({ name: dh.name, amountGrams: dh.amountGrams, hour: dh.insertDay })) : [],
+        tempSchedule: { initialTemp: 20.0, steps: [] }
+      });
+    }
+  }, [location.state]);
 
   //컴포넌트 첫 렌더링 때 백엔드에서 재료 목록 싹 다 가져오기
   useEffect(() => {
+
     fetch('http://localhost:8080/api/brewing/ingredients')
       .then(res => res.json())
       .then(data => {
         setDbIngredients(data);
         
+        if (!location.state?.recipe) {
         if (data.grains.length > 0 && data.hops.length > 0 && data.yeasts.length > 0) {
           setRecipeData(prev => ({
             ...prev,
@@ -43,7 +57,7 @@ function Simulator() {
             hops: [{ name: data.hops[0].name, amountGrams: 0.0, boilTimeMinutes: 60 }],
             yeast: { name: data.yeasts[0].name, amount: 0.0 }
           }));
-        }
+        }}
       })
       .catch(err => console.error("재료 목록 로딩 실패:", err));
   }, []);
@@ -418,7 +432,7 @@ function Simulator() {
           {/* 🌱 드라이홉 동적 리스트 */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
             <h4 style={{ margin: 0, color: '#9b59b6' }}>🌱 드라이 호핑 (Dry Hops)</h4>
-            <button style={{...btnStyle, backgroundColor: '#8e44ad', color: '#fff'}} onClick={() => addItem('dryHops', { name: dbIngredients.hops[0]?.name || "", amountGrams: 30, hour: 72 })}>+ 드라이홉 추가</button>
+            <button style={{...btnStyle, backgroundColor: '#8e44ad', color: '#fff'}} onClick={() => addItem('dryHops', { name: dbIngredients.hops[0]?.name || "", amountGrams: 30, hour: 0 })}>+ 드라이홉 추가</button>
           </div>
           {recipeData.dryHops.length === 0 && <div style={{fontSize: '14px', color: '#777', fontStyle: 'italic', paddingLeft: '10px'}}>적용된 드라이홉이 없습니다.</div>}
           {recipeData.dryHops.map((dh, index) => (

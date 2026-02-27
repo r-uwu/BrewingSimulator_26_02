@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 function RecipeList() {
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetch('http://localhost:8080/api/brewing/recipes')
@@ -96,6 +99,16 @@ function RecipeList() {
                   )}
                 </div>
               </div>
+              {/* 🌟 3. 시뮬레이터로 불러오기 버튼 추가 */}
+              <button 
+                onClick={() => navigate('/simulator', { state: { recipe } })} 
+                style={{ marginTop: 'auto', padding: '10px', backgroundColor: '#34495e', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', transition: '0.2s' }}
+                onMouseOver={(e) => e.target.style.backgroundColor = '#2c3e50'}
+                onMouseOut={(e) => e.target.style.backgroundColor = '#34495e'}
+              >
+                ✏️ 시뮬레이터로 불러오기
+              </button>
+              
             </div>
           ))}
         </div>
