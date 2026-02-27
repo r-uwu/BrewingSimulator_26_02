@@ -16,30 +16,6 @@ function Simulator() {
 
 );
 
-
-  /*
-  const [recipeData, setRecipeData] = useState({
-    batchSizeLiters: 20.0,
-    efficiency: 0.70,
-    durationDays: 14,
-    grains: [
-      { name: "Pilsner", weightKg: 4.0 },
-      { name: "Wheat", weightKg: 1.0 }
-    ],
-    hops: [
-      { name: "Magnum", amountGrams: 5.0, boilTimeMinutes: 60 },
-      { name: "Citra", amountGrams: 20.0, boilTimeMinutes: 0 }
-    ],
-    yeast: { name: "SafAle US-05", amount: 11.5 },
-    dryHops: [],
-    tempSchedule: { initialTemp: 20.0, steps: [] }
-  });
-
-  
-    const GRAIN_OPTIONS = ["Pilsner", "Pale Ale", "Wheat", "Munich", "Vienna", "Crystal 40L", "Roasted Barley"];
-    const HOP_OPTIONS = ["Magnum", "Citra", "Mosaic", "Cascade", "Centennial", "Simcoe", "Galaxy", "Saaz"];
-    const YEAST_OPTIONS = ["SafAle US-05", "SafAle S-04", "SafLager W-34/70", "SafBrew WB-06", "Lallemand Voss Kveik"];
-  */
  const [recipeData, setRecipeData] = useState({
     batchSizeLiters: 20.0,
     efficiency: 0.73,
@@ -50,6 +26,7 @@ function Simulator() {
     dryHops: [],
     tempSchedule: { initialTemp: 20.0, steps: [] }
   });
+  
 
 
   //컴포넌트 첫 렌더링 때 백엔드에서 재료 목록 싹 다 가져오기
@@ -366,7 +343,7 @@ function Simulator() {
         paddingRight: '20px' 
       }}>
         
-        <h2 style={{ color: '#fff', textAlign: 'center', marginBottom: '30px', marginTop: 0 }}>🍺 스마트 브루잉 시뮬레이터</h2>
+        <h2 style={{ color: '#fff', textAlign: 'center', marginBottom: '30px', marginTop: '30px' }}>🍺 스마트 브루잉 시뮬레이터</h2>
         
         {/* 📝 레시피 설계 카드 */}
         <div style={darkCardStyle}>
@@ -381,6 +358,13 @@ function Simulator() {
               효율(%): 
               <input type="number" step="0.01" value={recipeData.efficiency} onChange={e => setRecipeData({...recipeData, efficiency: parseFloat(e.target.value) || 0})} style={darkInputStyle} />
             </label>
+
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              발효 기간(일): 
+              <input type="number" step="1" value={recipeData.durationDays} onChange={e => setRecipeData({...recipeData, durationDays: parseInt(e.target.value) || 0})} style={darkInputStyle} />
+            </label>
+
+            
           </div>
 
           <hr style={{ borderColor: '#333', margin: '20px 0' }}/>
@@ -444,7 +428,7 @@ function Simulator() {
               </select>
               <input type="number" step="1" value={dh.amountGrams} onChange={(e) => handleArrayChange('dryHops', index, 'amountGrams', e.target.value)} style={{ ...darkInputStyle, width: '70px', marginRight: '5px', textAlign: 'right' }} /> g 
               <span style={{ margin: '0 10px', color: '#888' }}>(투입:</span>
-              <input type="number" step="1" value={dh.hour} onChange={(e) => handleArrayChange('dryHops', index, 'hour', e.target.value)} style={{ ...darkInputStyle, width: '70px', marginRight: '5px', textAlign: 'right' }} /> <span style={{ color: '#888' }}>h)</span>
+              <input type="number" step="1" value={dh.hour} onChange={(e) => handleArrayChange('dryHops', index, 'hour', e.target.value)} style={{ ...darkInputStyle, width: '70px', marginRight: '5px', textAlign: 'right' }} /> <span style={{ color: '#888' }}>Day)</span>
               
               <button style={deleteBtnStyle} onClick={() => removeItem('dryHops', index)}>❌</button>
             </div>

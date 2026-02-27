@@ -1,13 +1,17 @@
 package com.example.demo.controller;
 
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.example.demo.domain.*;
+import com.example.demo.dto.RecipeDto;
 import com.example.demo.dto.SimulationRequestDto;
 import com.example.demo.dto.SimulationResponseDto;
 import com.example.demo.engine.BrewCalculator;
@@ -112,7 +116,9 @@ public class BrewingController {
         
         Recipe recipe = new Recipe(request.getBatchSizeLiters(), request.getEfficiency());
         recipe.setName(recipeName);
+        recipe.setDurationDays(request.getDurationDays());
 
+        recipe.setDurationDays(request.getDurationDays());
         for (SimulationRequestDto.GrainRequest g : request.getGrains()) {
             Grain grain = grainRepo.findByName(g.getName())
                     .orElseThrow(() -> new IllegalArgumentException("DB에 없는 몰트: " + g.getName()));
@@ -129,6 +135,14 @@ public class BrewingController {
                 .orElseThrow(() -> new IllegalArgumentException("DB에 없는 효모: " + request.getYeast().getName()));
         recipe.setYeastItem(new YeastItem(realYeast, request.getYeast().getAmount(), true, 0, 0, false));
 
+        if (request.getDryHops() != null) {
+            for (SimulationRequestDto.DryHopRequest dh : request.getDryHops()) {
+                Hop dhHop = hopRepo.findByName(dh.getName())
+                        .orElseThrow(() -> new IllegalArgumentException("DB에 없는 홉: " + dh.getName()));
+                recipe.addDryHop(dhHop, dh.getAmountGrams(), dh.getHour());
+            }
+        }
+        
         //DB에 영구 저장! (Cascade)
         //레시피 하나만 save() 해도 그 안에 달린 GrainItem, HopItem, YeastItem이 각자 테이블에 알아서 저장됩니다.
         recipeRepo.save(recipe);
@@ -145,4 +159,12 @@ public class BrewingController {
         map.put("yeasts", yeastRepo.findAll());
         return map;
     }
+    
+    @GetMapping("/recipes")
+    public List<RecipeDto> getAllRecipes() {
+        List<Recipe> recipes = recipeRepo.findAll(Sort.by(Sort.Direction.DESC, "id"));
+        
+        return recipes.stream().map(RecipeDto::new).collect(Collectors.toList());
+    }
+    
 }

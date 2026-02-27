@@ -61,4 +61,15 @@ public class Recipe {
         this.yeastItem = yeastItem;
         if (yeastItem != null) { yeastItem.setRecipe(this);}
     }
+    
+    private int durationDays;
+
+    @OneToMany(mappedBy = "recipe", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<DryHopItem> dryHopItems = new ArrayList<>();
+
+    public void addDryHop(Hop hop, double amountGrams, int insertHour) {
+        DryHopItem item = new DryHopItem(hop, amountGrams, insertHour);
+        item.setRecipe(this);
+        this.dryHopItems.add(item);
+    }
 }
