@@ -3,7 +3,9 @@ package com.example.demo.controller;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.example.demo.domain.*;
 import com.example.demo.dto.SimulationRequestDto;
@@ -132,5 +134,15 @@ public class BrewingController {
         recipeRepo.save(recipe);
 
         return "레시피 [" + recipeName + "] 저장했습니다.";
+    }
+    
+    //프론트엔드 드롭다운용 재료 목록 제공 API
+    @GetMapping("/ingredients")
+    public Map<String, Object> getIngredients() {
+        Map<String, Object> map = new HashMap<>();
+        map.put("grains", grainRepo.findAll());
+        map.put("hops", hopRepo.findAll());
+        map.put("yeasts", yeastRepo.findAll());
+        return map;
     }
 }

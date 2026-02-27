@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import Home from './pages/Home';
 import Simulator from './pages/Simulator';
-import Card from './components/Card';
 
 function App() {
 
