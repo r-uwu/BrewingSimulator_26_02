@@ -16,7 +16,7 @@
 
 @font-face {
     font-family: 'Mulmaru';
-    src: url('/fonts/Mulmaru.woff2') format('woff2'), /* public 폴더 기준 경로 */
+    src: url('/fonts/Mulmaru.woff2') format('woff2'),
          url('/fonts/Mulmaru.woff') format('woff');
     font-weight: normal;
     font-style: normal;

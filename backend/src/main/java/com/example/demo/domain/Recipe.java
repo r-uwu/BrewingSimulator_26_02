@@ -72,4 +72,6 @@ public class Recipe {
         item.setRecipe(this);
         this.dryHopItems.add(item);
     }
+    
+    private double srm;
 }

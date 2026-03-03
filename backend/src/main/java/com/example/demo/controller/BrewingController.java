@@ -117,8 +117,8 @@ public class BrewingController {
         Recipe recipe = new Recipe(request.getBatchSizeLiters(), request.getEfficiency());
         recipe.setName(recipeName);
         recipe.setDurationDays(request.getDurationDays());
-
-        recipe.setDurationDays(request.getDurationDays());
+        recipe.setSrm(request.getSrm());
+        
         for (SimulationRequestDto.GrainRequest g : request.getGrains()) {
             Grain grain = grainRepo.findByName(g.getName())
                     .orElseThrow(() -> new IllegalArgumentException("DB에 없는 몰트: " + g.getName()));

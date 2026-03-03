@@ -22,6 +22,7 @@ public class SimulationRequestDto {
     private YeastRequest yeast;
     private List<DryHopRequest> dryHops;
     private TemperatureSchedule tempSchedule;
+    private double srm;
 
     // 내부 DTO 클래스들
     // 프론트엔드에서 이름과 양만 받음

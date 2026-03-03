@@ -52,7 +52,7 @@ function App() {
 
         {/* 좌측: 로고 및 타이틀 (클릭 시 홈으로) */}
         <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <img src="/logo.png" alt="logo" style={{ height: '40px' }} /> {/* 네비바용 미니 로고 */}
+          <img src="/logo.png" alt="logo" style={{ height: '60px', margin: '-10px', marginTop: '-15px' }} /> {/* 네비바용 미니 로고 */}
           <div style={{ color: '#F5A623', fontWeight: '900', fontSize: '22px', letterSpacing: '1px' }}>
             방구석 브루어리
           </div>
@@ -67,7 +67,7 @@ function App() {
       </nav>
       
       {/* 메인 라우터 화면 */}
-      <div style={{ paddingTop: '70px', minHeight: '100vh', backgroundColor: '#333333' }}>
+      <div style={{ paddingTop: '30px', minHeight: '100vh', backgroundColor: '#333333' }}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/simulator" element={<Simulator />} />

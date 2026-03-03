@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom'; // 🌟 useNavigate 추가
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'; 
+import BeerLoading from './BeerLoading';
 
 function Simulator() {
   const [result, setResult] = useState(null);
@@ -10,6 +11,7 @@ function Simulator() {
   const [dbIngredients, setDbIngredients] = useState({ grains: [], hops: [], yeasts: [] });
 
   const location = useLocation();
+  const navigate = useNavigate(); // 🌟 네비게이션 함수 선언
 
   const [recipeData, setRecipeData] = useState({
     batchSizeLiters: 20.0,
@@ -34,6 +36,30 @@ function Simulator() {
     danger: '#E74C3C',       
     info: '#3498DB'          
   };
+
+  const [initialLoading, setInitialLoading] = useState(!!location.state?.recipe);
+
+  useEffect(() => {
+  if (location.state && location.state.recipe) {
+
+    const loadedRecipe = location.state.recipe;
+    setRecipeData({
+      ...recipeData,
+      batchSizeLiters: loadedRecipe.batchSizeLiters || 20.0,
+      grains: loadedRecipe.grains || [],
+      hops: loadedRecipe.hops || [],
+      yeast: loadedRecipe.yeast || { name: "", amount: 0.0 },
+      durationDays: loadedRecipe.durationDays || 14
+    });
+
+
+    const timer = setTimeout(() => {
+      setInitialLoading(false);
+    }, 1800);
+
+    return () => clearTimeout(timer);
+  }
+}, [location.state]);
 
   useEffect(() => {
     if (location.state && location.state.recipe) {
@@ -94,49 +120,39 @@ function Simulator() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(recipeData) 
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`서버 에러 발생: ${errorText}`);
-      }
-      
+      if (!response.ok) throw new Error(`서버 에러`);
       const data = await response.json();
       setResult(data);
-      
-    } catch (error) {
-      console.error(error);
-      alert(error.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { alert(error.message); } finally { setLoading(false); }
   };
 
   const saveRecipe = async () => {
     const recipeName = prompt("저장할 레시피 이름을 입력하세요:", "나의 커스텀 레시피");
     if (!recipeName) return; 
-
     setIsSaving(true);
     try {
-      const response = await fetch(`http://localhost:8080/api/brewing/save?recipeName=${encodeURIComponent(recipeName)}`, {
+      const simResponse = await fetch('http://localhost:8080/api/brewing/simulate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(recipeData)
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`저장 실패: ${errorText}`);
-      }
-      
+      if (!simResponse.ok) throw new Error("분석 중 오류가 발생했습니다.");
+      const simResult = await simResponse.json();
+
+      const saveData = {
+        ...recipeData,
+        srm: simResult.srm
+      };
+
+      const response = await fetch(`http://localhost:8080/api/brewing/save?recipeName=${encodeURIComponent(recipeName)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(saveData)
+      });
       const msg = await response.text();
       alert(msg); 
-      
-    } catch (error) {
-      console.error(error);
-      alert(error.message);
-    } finally {
-      setIsSaving(false);
-    }
+    } catch (error) { alert(error.message); } finally { setIsSaving(false); }
   };
 
   const srmToColor = (srm) => {
@@ -146,19 +162,12 @@ function Simulator() {
       10: '#B87333', 11: '#A0522D', 12: '#8B4513', 13: '#704214', 14: '#5D4037', 
       15: '#3E2723', 20: '#1A1A1A', 25: '#000000', 30: '#000000', 35: '#000000', 40: '#000000'
     };
-    if (srm <= 0) return srmColors[0];
-    if (srm >= 40) return srmColors[40];
-
     const definedSrms = Object.keys(srmColors).map(Number).sort((a, b) => a - b);
     let closestSrm = definedSrms[0];
     let minDiff = Math.abs(srm - closestSrm);
-
     for (let i = 1; i < definedSrms.length; i++) {
       const diff = Math.abs(srm - definedSrms[i]);
-      if (diff < minDiff) {
-        minDiff = diff;
-        closestSrm = definedSrms[i];
-      }
+      if (diff < minDiff) { minDiff = diff; closestSrm = definedSrms[i]; }
     }
     return srmColors[closestSrm];
   };
@@ -171,7 +180,6 @@ function Simulator() {
     marginBottom: '20px', 
     border: `1px solid ${colors.cardBorder}`,
     boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
-    transition: 'all 0.3s ease-in-out' ,
     fontFamily: '"Mulmaru", sans-serif'
   };
 
@@ -183,8 +191,6 @@ function Simulator() {
     borderRadius: '8px',
     outline: 'none',
     width: '100%',
-    fontFamily: 'inherit',
-    transition: 'border-color 0.2s',
     fontFamily: '"Mulmaru", sans-serif'
   };
 
@@ -195,30 +201,68 @@ function Simulator() {
     borderRadius: '8px', 
     border: 'none', 
     fontWeight: 'bold',
-    fontFamily: 'inherit',
-    transition: 'opacity 0.2s',
     fontFamily: '"Mulmaru", sans-serif'
   };
   
   const deleteBtnStyle = { ...btnStyle, backgroundColor: colors.bgMain, color: colors.textSub, padding: '8px 12px' };
+
+  if (initialLoading) {
+  return (
+    <BeerLoading 
+      srm={location.state.recipe.srm} 
+      message={`${location.state.recipe?.name} 레시피를 분석 중...`} 
+    />
+  );
+}
 
   return (
     <div style={{ 
       width: '100%', 
       backgroundColor: colors.bgMain, 
       minHeight: '100vh', 
-      padding: '40px 0', 
-      fontFamily: '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", sans-serif',
+      padding: '60px 0', 
+      fontFamily: '"Mulmaru", sans-serif', // 🌟 전체 폰트 적용
       display: 'flex', 
       justifyContent: 'center', 
       alignItems: 'flex-start'  
     }}>
-      <div style={{ width: '90%', maxWidth: '900px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        
-        <h2 style={{ color: colors.textMain, textAlign: 'center', marginBottom: '30px', marginTop: '20px', fontWeight: '800', letterSpacing: '1px' }}>
-          <span style={{ color: colors.beerGold }}>🍺 스마트 브루잉</span> 시뮬레이터
-        </h2>
-        
+      <div style={{ width: '90%', maxWidth: '1100px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+        {/* 🌟 [NEW] RecipeList와 통일된 헤더 섹션 */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'flex-end', 
+          borderBottom: `1px solid ${colors.cardBorder}`, 
+          paddingBottom: '20px', 
+          marginBottom: '20px' 
+        }}>
+          <div>
+            <h2 style={{ color: colors.textMain, margin: '0 0 5px 0', fontSize: '1.8em', fontWeight: '700', letterSpacing: '-0.5px' }}>
+              브루잉 시뮬레이터
+            </h2>
+            <p style={{ color: colors.textSub, margin: 0, fontSize: '0.95em' }}>나만의 레시피를 설계하고 발효 과정을 예측해보세요.</p>
+          </div>
+          <button 
+            onClick={() => navigate('/recipes')} // 🌟 저장소 이동
+            style={{ 
+              padding: '16px 20px', 
+              backgroundColor: colors.cardBorder, 
+              color: colors.textMain, 
+              border: 'none', 
+              borderRadius: '8px', 
+              cursor: 'pointer', 
+              fontWeight: '700',
+              fontFamily: 'inherit',
+              transition: 'all 0.2s'
+            }}
+            onMouseOver={(e) => e.target.style.backgroundColor = '#555'}
+            onMouseOut={(e) => e.target.style.backgroundColor = colors.cardBorder}
+          >
+            📂 레시피 불러오기
+          </button>
+        </div>
+
         {/* 📝 레시피 설계 카드 */}
         <div style={darkCardStyle}>
           <h3 style={{ color: colors.textMain, borderBottom: `2px solid ${colors.cardBorder}`, paddingBottom: '15px', marginTop: 0, fontWeight: '700' }}>
@@ -234,7 +278,7 @@ function Simulator() {
               매쉬 효율(%)
               <input type="number" step="0.01" value={recipeData.efficiency} onChange={e => setRecipeData({...recipeData, efficiency: parseFloat(e.target.value) || 0})} style={darkInputStyle} />
             </label>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: colors.textSub, fontSize: '0.9em', fontWeight: '600' }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: colors.textSub, fontSize: '0.9em', fontWeight: '600', marginRight : '25px' }}>
               총 발효 기간(일)
               <input type="number" step="1" value={recipeData.durationDays} onChange={e => setRecipeData({...recipeData, durationDays: parseInt(e.target.value) || 0})} style={darkInputStyle} />
             </label>
@@ -332,8 +376,6 @@ function Simulator() {
             <span style={{ margin: '0 15px', color: colors.textSub, fontSize: '0.9em' }}>(0일차부터 시작)</span>
           </div>
 
-          {recipeData.tempSchedule.steps.length === 0 && <div style={{fontSize: '0.9em', color: colors.textSub, fontStyle: 'italic', paddingLeft: '10px'}}>추가된 온도 변경 스케줄이 없습니다.</div>}
-          
           {recipeData.tempSchedule.steps.map((step, index) => (
             <div key={`temp-${index}`} style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', marginLeft: '20px' }}>
               <span style={{ color: colors.textSub, marginRight: '15px', fontSize: '1.2em' }}>↳</span>
@@ -343,14 +385,12 @@ function Simulator() {
                 setRecipeData({...recipeData, tempSchedule: {...recipeData.tempSchedule, steps: newSteps}});
               }} style={{ ...darkInputStyle, width: '80px', marginRight: '8px', textAlign: 'right', color: colors.beerGold, fontWeight: 'bold' }} /> 
               <span style={{ color: colors.textSub, marginRight: '20px' }}>일차부터</span>
-              
               <input type="number" step="0.1" value={step.targetTemp} onChange={(e) => {
                 const newSteps = [...recipeData.tempSchedule.steps];
                 newSteps[index].targetTemp = parseFloat(e.target.value) || 0;
                 setRecipeData({...recipeData, tempSchedule: {...recipeData.tempSchedule, steps: newSteps}});
               }} style={{ ...darkInputStyle, width: '90px', marginRight: '8px', textAlign: 'right', color: colors.danger, fontWeight: 'bold' }} /> 
               <span style={{color: colors.textSub}}>°C 로 변경</span>
-              
               <button style={{...deleteBtnStyle, marginLeft: '15px'}} onClick={() => {
                 const newSteps = [...recipeData.tempSchedule.steps];
                 newSteps.splice(index, 1);
@@ -364,19 +404,17 @@ function Simulator() {
         {/* 🔘 액션 버튼 영역 */}
         <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', margin: '20px 0 40px 0' }}>
           <button onClick={runSimulation} disabled={loading || isSaving} style={{ 
-            padding: '16px 32px', fontSize: '1.1em', cursor: (loading || isSaving) ? 'wait' : 'pointer', 
-            backgroundColor: loading ? '#B9770E' : colors.beerGold, border: 'none', borderRadius: '12px', 
+            padding: '16px 32px', fontSize: '1.1em', backgroundColor: colors.beerGold, border: 'none', borderRadius: '12px', 
             color: '#111', fontWeight: '800', fontFamily: 'inherit',
-            boxShadow: `0 4px 15px ${colors.beerGold}40`, transition: 'all 0.2s' 
+            boxShadow: `0 4px 15px ${colors.beerGold}40`, transition: 'all 0.2s', cursor: 'pointer'
           }}>
-            {loading ? '⏳ 시뮬레이션 분석 중...' : '🚀 발효 시뮬레이션 가동'}
+            {loading ? '⏳ 분석 중...' : '🚀 발효 시뮬레이션 가동'}
           </button>
 
           <button onClick={saveRecipe} disabled={loading || isSaving} style={{ 
-            padding: '16px 32px', fontSize: '1.1em', cursor: (loading || isSaving) ? 'wait' : 'pointer', 
-            backgroundColor: isSaving ? '#229954' : colors.hopGreen, border: 'none', borderRadius: '12px', 
+            padding: '16px 32px', fontSize: '1.1em', backgroundColor: colors.hopGreen, border: 'none', borderRadius: '12px', 
             color: '#111', fontWeight: '800', fontFamily: 'inherit',
-            boxShadow: `0 4px 15px ${colors.hopGreen}40`, transition: 'all 0.2s' 
+            boxShadow: `0 4px 15px ${colors.hopGreen}40`, transition: 'all 0.2s', cursor: 'pointer'
           }}>
             {isSaving ? '💾 저장 중...' : '💾 내 일지에 레시피 저장'}
           </button>
@@ -456,7 +494,6 @@ function Simulator() {
                 </div>
               )}
             </div>
-
 {/* 🌟 3. [NEW] 한눈에 보는 발효 타임라인 그래프 🌟 */}
             <h3 style={{ color: colors.textMain, marginTop: '40px', marginBottom: '15px', fontWeight: '700' }}>📈 발효 비중 및 온도 추이</h3>
             <div style={{ 
@@ -573,6 +610,10 @@ function Simulator() {
                   </div>
                 </div>
               ))}
+
+              
+
+              
             </div>
           </div>
         )}
