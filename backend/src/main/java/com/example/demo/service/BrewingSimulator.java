@@ -32,125 +32,97 @@ public class BrewingSimulator {
      * 시뮬레이션 메인 메서드
      */
     public List<SimulationLog> simulate(Recipe recipe, TemperatureSchedule tempSchedule,
-                                        List<DryHopAddition> dryHopAdditions, int durationDays) {
-        List<SimulationLog> logs = new ArrayList<>();
-        int totalHours = durationDays * 24;
-
-        simulateBrewhouse(recipe, logs);
-
-        // 발효 초기값 설정
-        double currentGravity = densityEngine.calculateOG(recipe);
-        final double startOG = currentGravity;
-
-        // 목표 지점(TargetFG) 계산
-        double optimalTemp = recipe.getYeastItem().getYeast().getMaxTemp();
-        double targetFG = fermentationEngine.calculateFG(recipe, startOG, optimalTemp, 65.0);
-
-
-        FlavorProfile lastProfile = null;
-        String phase = "Lag Phase";
-
-        List<String> dryHopTags = new ArrayList<>();
-
-        double dynamicFG = targetFG;
-        double dynamicIBU = calculator.calculateIBU(recipe);
-        double currentDiacetyl = 0;
-
-
-        for (int hour = 0; hour <= totalHours; hour++) {
-            double currentTemp = tempSchedule.getTempAt(hour);
-
-            // 비중
-            double drop = calculateHourlyDrop(hour, currentGravity, targetFG, currentTemp, recipe.getYeastItem().getYeast());
-            if (drop < 0) drop = 0;
-            currentGravity -= drop;
-
-            double currentABV = fermentationEngine.calculateABV(startOG, currentGravity);
-
-            // 드라이호핑
-            for(DryHopAddition dryHopAddition : dryHopAdditions){
-                if(dryHopAddition.hour() == hour)
-                {
-                    double gramsPerLiter = dryHopAddition.amountGrams() / recipe.getBatchSizeLiters();
-                    double addedIbu = hopChemistryEngine.calculateHumulinoneIBU(gramsPerLiter, currentABV);
-                    double fgDrop = hopChemistryEngine.calculateHopCreepDrop(gramsPerLiter, currentGravity);
-
-                    dynamicIBU += addedIbu;
-                    dynamicFG -= fgDrop;
-                    currentDiacetyl += 25.0;
-
-                    /*
-                    logs.add(new SimulationLog(
-                            hour, currentTemp, currentGravity,
-                            fermentationEngine.calculateABV(startOG, currentGravity),
-                            //"Event: Dry Hop Added",
-                            "Hop Addition: " + dryHopAddition.hop().name(),
-                            List.of("+" + dryHopAddition.amountGrams() + "g added"),
-                            0, 0
-                    ));
-
-                     */
-
-                    logs.add(new SimulationLog(
-                            hour, currentTemp, currentGravity, currentABV,
-                            //"Event: Dry Hop Added",
-                            "Hop Addition: " + dryHopAddition.hop().getName(),
-                            List.of(String.format("+%.1fg %s (IBU +%.2f, TargetFG -%.4f)",
-                                    dryHopAddition.amountGrams(), dryHopAddition.hop().getName(), addedIbu, fgDrop)),
-                            0, 0
-                    ));
-
-                    if (dryHopAddition.hop().getFlavorTags() != null) {
-                    dryHopTags.addAll(dryHopAddition.hop().getFlavorTags());
-                    }
-                }
-            }
-
-            if (currentDiacetyl > 0) {
-                double reduction = hopChemistryEngine.calculateDiacetylReduction(currentDiacetyl, currentTemp);
-                currentDiacetyl -= reduction;
-
-            }
-
-            if (drop < 0) drop = 0;
-
-            currentGravity -= drop;
-
-            //if (currentGravity < targetFG) currentGravity = targetFG;
-
-            // 혹시라도 비중이 시작점보다 높아질까봐 엔트로피 보정
-            if (currentGravity > startOG) currentGravity = startOG;
-
-            //double currentABV = fermentationEngine.calculateABV(startOG, currentGravity);
-
-            //phase = determinePhase(hour, currentGravity, startOG, targetFG, currentTemp);
-
-            phase = determinePhase(hour, currentGravity, startOG, targetFG, tempSchedule.getTempAt(hour));
-
-            // flavor 분석
-
-            if (hour == 0 || hour % 24 == 0 || hour == totalHours) {
-                lastProfile = calculator.predictFlavorProfile(recipe, currentTemp);
-            }
-
-            if (lastProfile != null) {
-                List<String> combinedTags = new ArrayList<>(lastProfile.flavorTags());
-                combinedTags.addAll(dryHopTags);
-
-
-                logs.add(new SimulationLog(
-                        hour, currentTemp, currentGravity, currentABV, phase,
-                        combinedTags.stream().distinct().toList(),
-                        lastProfile.esterScore(), lastProfile.diacetylRisk()
-                ));
-            }
-            
-            //비중 낮아져서 컨디셔닝 페이즈로 가면 발효 종료로 간주하는 코드
-            //if (phase.contains("Finished") && hour > 240) break;
-        }
-
-        return logs;
-    }
+            List<DryHopAddition> dryHopAdditions, int durationDays) {
+	List<SimulationLog> logs = new ArrayList<>();
+	int totalHours = durationDays * 24;
+	
+	simulateBrewhouse(recipe, logs);
+	
+	double currentGravity = densityEngine.calculateOG(recipe);
+	final double startOG = currentGravity;
+	
+	double optimalTemp = (recipe.getYeastItem().getYeast().getMaxTemp() > 0) ? 
+	 recipe.getYeastItem().getYeast().getMaxTemp() : 20.0;
+	double targetFG = fermentationEngine.calculateFG(recipe, startOG, optimalTemp, 65.0);
+	
+	// 안전장치
+	double fallbackFG = 1.0 + (startOG - 1.0) * 0.25; 
+	if (targetFG > startOG - 0.015) targetFG = fallbackFG;
+	
+	FlavorProfile lastProfile = null;
+	String phase = "Lag Phase";
+	List<String> dryHopTags = new ArrayList<>();
+	
+	double dynamicFG = targetFG;
+	double dynamicIBU = calculator.calculateIBU(recipe);
+	double currentDiacetyl = 0;
+	
+	for (int hour = 0; hour <= totalHours; hour++) {
+		// hours를 그냥 hours로 쓰고 day개념 추가
+		int currentDay = hour / 24;
+		
+		double currentTemp = tempSchedule.getTempAt(hour); 
+		
+		double drop = calculateHourlyDrop(hour, currentGravity, dynamicFG, currentTemp, recipe.getYeastItem().getYeast());
+		if (drop < 0) drop = 0;
+		currentGravity -= drop;
+		
+		double currentABV = fermentationEngine.calculateABV(startOG, currentGravity);
+		
+		for(DryHopAddition dryHopAddition : dryHopAdditions){
+		if(dryHopAddition.hour() * 24 == hour) { 
+			double gramsPerLiter = dryHopAddition.amountGrams() / recipe.getBatchSizeLiters();
+			double addedIbu = hopChemistryEngine.calculateHumulinoneIBU(gramsPerLiter, currentABV);
+			double fgDrop = hopChemistryEngine.calculateHopCreepDrop(gramsPerLiter, currentGravity);
+			
+			dynamicIBU += addedIbu;
+			dynamicFG -= fgDrop;
+			currentDiacetyl += 25.0;
+			
+			logs.add(new SimulationLog(
+			hour, currentTemp, currentGravity, currentABV,
+			"Hop Addition: " + dryHopAddition.hop().getName(),
+			List.of(String.format("+%.1fg %s (IBU +%.2f, TargetFG -%.4f)",
+			        dryHopAddition.amountGrams(), dryHopAddition.hop().getName(), addedIbu, fgDrop)),
+			0, 0
+			));
+			
+			if (dryHopAddition.hop().getFlavorTags() != null) {
+				dryHopTags.addAll(dryHopAddition.hop().getFlavorTags());
+				}
+			}
+		}
+		
+		if (currentDiacetyl > 0) {
+			double reduction = hopChemistryEngine.calculateDiacetylReduction(currentDiacetyl, currentTemp);
+			currentDiacetyl -= reduction;
+		}
+		
+		if (currentGravity > startOG) currentGravity = startOG;
+		if (currentGravity < dynamicFG) currentGravity = dynamicFG; 
+		
+		phase = determinePhase(hour, currentGravity, startOG, dynamicFG, currentTemp);
+		
+		if (hour == 0 || hour % 24 == 0 || hour == totalHours) {
+			lastProfile = calculator.predictFlavorProfile(recipe, currentTemp);
+		}
+		
+			if (hour == 0 || hour % 24 == 0 || hour == totalHours) {
+				if (lastProfile != null) {
+				List<String> combinedTags = new ArrayList<>(lastProfile.flavorTags());
+				combinedTags.addAll(dryHopTags);
+				
+				logs.add(new SimulationLog(
+				hour, currentTemp, currentGravity, currentABV, phase,
+				combinedTags.stream().distinct().toList(),
+				lastProfile.esterScore(), lastProfile.diacetylRisk()
+				));
+				}
+			}
+		}
+	
+	return logs;
+	}
 
     private void simulateBrewhouse(Recipe recipe, List<SimulationLog> logs) {
         double og = densityEngine.calculateOG(recipe);
@@ -159,14 +131,17 @@ public class BrewingSimulator {
         logs.add(new SimulationLog(-120, 65.0, mashGravity, 0.0, "Mashing Start", List.of("Starch Conversion"), 0, 0));
         logs.add(new SimulationLog(-90, 75.0, mashGravity + 0.002, 0.0, "Mash Out", List.of("Enzyme Denature"), 0, 0));
 
-
-        logs.add(new SimulationLog(-60, 100.0, mashGravity + 0.005, 0.0, "Boil Start", List.of("Sterilization"), 0, 0));
-
+        double boilStartGravity = mashGravity + 0.005;
+        logs.add(new SimulationLog(-60, 100.0, boilStartGravity, 0.0, "Boil Start", List.of("Sterilization"), 0, 0));
+        
         recipe.getHopItems().stream()
                 .sorted((h1, h2) -> Integer.compare(h2.getBoilTimeMinutes(), h1.getBoilTimeMinutes()))
                 .forEach(hop -> {
                     int logTime = -hop.getBoilTimeMinutes();
-                    logs.add(new SimulationLog(logTime, 100.0, 0, 0,
+                    
+                    double currentGravity = (logTime == 0) ? og : boilStartGravity;
+                    
+                    logs.add(new SimulationLog(logTime, 100.0, currentGravity, 0,
                             "Hop Addition: " + hop.getHop().getName(),
                             List.of(hop.getAmountGrams() + "g added"), 0, 0));
                 });
@@ -178,37 +153,28 @@ public class BrewingSimulator {
 
     private double calculateHourlyDrop(int hour, double currentG, double targetFG, double temp, Yeast yeast) {
         double remainingSugar = currentG - targetFG;
-        if (remainingSugar <= 0.0001) return 0.0;
+        if (remainingSugar <= 0.0005) return 0.0;
 
-        if (hour < 12) return 0.0002;
-
-        //Q10 온도 활성도
         double baseTemp = 20.0;
-        double q10 = 2.5;
+        double q10 = 2.0; 
         double tempActivity = Math.pow(q10, (temp - baseTemp) / 10.0);
 
-        // 효모 생존 한계 패널티
-        if (temp < yeast.getMinTemp()) {
-            tempActivity *= 0.15;
-        } else if (temp > yeast.getMaxTemp() + 5) {
-            tempActivity = 0.0;
-        }
+        double minT = (yeast.getMinTemp() > 0) ? yeast.getMinTemp() : 15.0;
+        double maxT = (yeast.getMaxTemp() > 0) ? yeast.getMaxTemp() : 25.0;
 
-        double reactionConstant;
+        if (temp < minT) tempActivity *= 0.1;
+        else if (temp > maxT + 5) tempActivity = 0.0;
 
-        if(hour <24) // 효모증식기
-        {
-            reactionConstant = 0.003;
-        }
-        else if (hour < 120) { // 하루에 약 0.008 ~ 0.012 정도씩 꾸준히 떨어지도록 세팅하면 될 듯
-            //reactionConstant = 0.025;
-            reactionConstant = 0.01;
-        } else {
-            reactionConstant = 0.003;
-        }
+        double yeastActivityFactor;
+        if (hour < 24) yeastActivityFactor = 0.05;       // 1일차: 지체기
+        else if (hour < 48) yeastActivityFactor = 0.8;   // 2일차: 증식기
+        else if (hour < 120) yeastActivityFactor = 1.8;  // 3~5일차: 폭풍 발효기
+        else if (hour < 240) yeastActivityFactor = 0.8;  // 6~10일차: 감속기
+        else yeastActivityFactor = 0.2;                  // 이후: 안정기
 
-        // dG/dt = k * (G - G_target) * Activity
-        double drop = remainingSugar * reactionConstant * tempActivity;
+        // 🌟 반응 상수 상향 조정 (에일 기준 확실하게 떨어지도록)
+        double baseHourlyRate = 0.018; 
+        double drop = remainingSugar * baseHourlyRate * tempActivity * yeastActivityFactor;
 
         return Math.min(drop, remainingSugar);
     }

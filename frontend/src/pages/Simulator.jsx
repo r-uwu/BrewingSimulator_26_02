@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'; 
 
 function Simulator() {
-  const [result, setResult] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [dbIngredients, setDbIngredients] = useState({ grains: [], hops: [], yeasts: [] });
 
@@ -14,19 +14,30 @@ function Simulator() {
   const [recipeData, setRecipeData] = useState({
     batchSizeLiters: 20.0,
     efficiency: 0.73,
-        durationDays: 14,
+    durationDays: 14,
     grains: [{ name: "", weightKg: 0.0 }],
     hops: [{ name: "", amountGrams: 0.0, boilTimeMinutes: 60 }],
     yeast: { name: "", amount: 0.0 },
     dryHops: [],
     tempSchedule: { initialTemp: 20.0, steps: [] }
   });
-  
+
+  const colors = {
+    bgMain: '#333333',       
+    bgCard: '#242424',       
+    bgInput: '#1A1A1A',      
+    cardBorder: '#444444',   
+    beerGold: '#F5A623',     
+    hopGreen: '#2ECC71',     
+    textMain: '#F0F0F0',     
+    textSub: '#A0A0A0',      
+    danger: '#E74C3C',       
+    info: '#3498DB'          
+  };
 
   useEffect(() => {
     if (location.state && location.state.recipe) {
       const loadedRecipe = location.state.recipe;
-      
       setRecipeData({
         batchSizeLiters: loadedRecipe.batchSizeLiters || 20.0,
         efficiency: 0.73,
@@ -34,33 +45,30 @@ function Simulator() {
         grains: loadedRecipe.grains && loadedRecipe.grains.length > 0 ? loadedRecipe.grains : [{ name: "", weightKg: 0.0 }],
         hops: loadedRecipe.hops && loadedRecipe.hops.length > 0 ? loadedRecipe.hops : [{ name: "", amountGrams: 0.0, boilTimeMinutes: 60 }],
         yeast: loadedRecipe.yeast || { name: "", amount: 0.0 },
-
         dryHops: loadedRecipe.dryHops ? loadedRecipe.dryHops.map(dh => ({ name: dh.name, amountGrams: dh.amountGrams, hour: dh.insertDay })) : [],
-        tempSchedule: { initialTemp: 20.0, steps: [] }
+        tempSchedule: loadedRecipe.tempSchedule || { initialTemp: 20.0, steps: [] }
       });
     }
   }, [location.state]);
 
-  //컴포넌트 첫 렌더링 때 백엔드에서 재료 목록 싹 다 가져오기
   useEffect(() => {
-
     fetch('http://localhost:8080/api/brewing/ingredients')
       .then(res => res.json())
       .then(data => {
         setDbIngredients(data);
-        
         if (!location.state?.recipe) {
-        if (data.grains.length > 0 && data.hops.length > 0 && data.yeasts.length > 0) {
-          setRecipeData(prev => ({
-            ...prev,
-            grains: [{ name: data.grains[0].name, weightKg: 0.0 }],
-            hops: [{ name: data.hops[0].name, amountGrams: 0.0, boilTimeMinutes: 60 }],
-            yeast: { name: data.yeasts[0].name, amount: 0.0 }
-          }));
-        }}
+          if (data.grains.length > 0 && data.hops.length > 0 && data.yeasts.length > 0) {
+            setRecipeData(prev => ({
+              ...prev,
+              grains: [{ name: data.grains[0].name, weightKg: 0.0 }],
+              hops: [{ name: data.hops[0].name, amountGrams: 0.0, boilTimeMinutes: 60 }],
+              yeast: { name: data.yeasts[0].name, amount: 0.0 }
+            }));
+          }
+        }
       })
       .catch(err => console.error("재료 목록 로딩 실패:", err));
-  }, []);
+  }, [location.state?.recipe]);
 
   const addItem = (listName, defaultItem) => {
     setRecipeData({ ...recipeData, [listName]: [...recipeData[listName], defaultItem] });
@@ -78,51 +86,9 @@ function Simulator() {
     setRecipeData({ ...recipeData, [listName]: newList });
   };
 
-    const handleGrainChange = (index, field, value) => {
-    const newGrains = [...recipeData.grains];
-    newGrains[index][field] = field === 'weightKg' ? parseFloat(value) || 0 : value;
-    setRecipeData({ ...recipeData, grains: newGrains });
-  };
-
-    const handleHopChange = (index, field, value) => {
-    const newHops = [...recipeData.hops];
-    newHops[index][field] = field === 'name' ? value : parseFloat(value) || 0;
-    setRecipeData({ ...recipeData, hops: newHops });
-  };
-
-
-/*
-  const runSimulation = async () => {
-    setLoading(true);
-    
-    const payload = {
-      batchSizeLiters: 20.0,
-      efficiency: 0.70,
-      durationDays: 14,
-      grains: [
-        { name: "Pilsner", weightKg: 4.0 },
-        { name: "Wheat", weightKg: 1.0 }
-      ],
-      hops: [
-        { name: "Magnum", amountGrams: 5.0, boilTimeMinutes: 60 },
-        { name: "Citra", amountGrams: 20.0, boilTimeMinutes: 0 }
-      ],
-      yeast: { name: "SafAle US-05", amount: 11.5 },
-      dryHops: [
-        { hour: 48, name: "Citra", amountGrams: 50.0 }
-      ],
-      tempSchedule: {
-        initialTemp: 20.0,
-        steps: [ { hour: 240, targetTemp: 15.0 } ]
-      }
-    };
-    */
-  
-
   const runSimulation = async () => {
     setLoading(true);
     try {
- 
       const response = await fetch('http://localhost:8080/api/brewing/simulate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -145,102 +111,12 @@ function Simulator() {
     }
   };
 
-
-
-
-
-
-
-    
-
-  /*
-    try {
-      const response = await fetch('http://localhost:8080/api/brewing/simulate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) throw new Error("서버 통신 에러!");
-      
-      const data = await response.json();
-      console.log("백엔드 데이터 성공적으로 도착!", data);
-      
-      //새로 만든 ResponseDto 객체 그대로 저장
-      setResult(data);
-      
-    } catch (error) {
-      console.error(error);
-      alert(error.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const saveRecipe = async () => {
-
-  const recipeName = prompt("저장할 레시피 이름을 입력하세요:", "나의 첫 DDH NEIPA");
-    if (!recipeName) return;
-
-    setIsSaving(true);
-
-    // 시뮬레이션 때 썼던 payload 재활용
-    const payload = {
-      batchSizeLiters: 20.0,
-      efficiency: 0.70,
-      durationDays: 14,
-      grains: [
-        { name: "Pilsner", weightKg: 4.0 },
-        { name: "Wheat", weightKg: 1.0 }
-      ],
-      hops: [
-        { name: "Magnum", amountGrams: 5.0, boilTimeMinutes: 60 },
-        { name: "Citra", amountGrams: 20.0, boilTimeMinutes: 0 }
-      ],
-      yeast: { name: "SafAle US-05", amount: 11.5 },
-      dryHops: [
-        { hour: 48, name: "Citra", amountGrams: 50.0 }
-      ],
-      tempSchedule: {
-        initialTemp: 20.0,
-        steps: [ { hour: 240, targetTemp: 15.0 } ]
-      }
-    };
-
-    try {
-      //방금 백엔드에 만든 /save 엔드포인트로 전송
-      //(?recipeName=파라미터 포함)
-      const response = await fetch(`http://localhost:8080/api/brewing/save?recipeName=${encodeURIComponent(recipeName)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`저장 실패: ${errorText}`);
-      }
-      
-      const msg = await response.text();
-      alert(msg);
-      
-    } catch (error) {
-      console.error(error);
-      alert(error.message);
-    } finally {
-      setIsSaving(false);
-    }
-
-  }
-    */
-
   const saveRecipe = async () => {
     const recipeName = prompt("저장할 레시피 이름을 입력하세요:", "나의 커스텀 레시피");
     if (!recipeName) return; 
 
     setIsSaving(true);
     try {
-
       const response = await fetch(`http://localhost:8080/api/brewing/save?recipeName=${encodeURIComponent(recipeName)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -263,39 +139,17 @@ function Simulator() {
     }
   };
 
-  // --- [New] SRM 수치를 실제 HEX 색상으로 변환하는 테이블 lookup 함수 ---
   const srmToColor = (srm) => {
-    // 공통 SRM 대 RGB 매핑 테이블 (근사값)
-    const colors = {
-      0: '#FFFFE0', // Very light, close to white
-      1: '#FFFFBF', // Pale straw
-      2: '#FFFF80', // Straw
-      3: '#FFFF40', // Deep straw
-      4: '#FFD700', // Gold
-      5: '#FFC000', // Deep gold
-      6: '#FFA500', // Orange-ish, pale amber
-      7: '#FF8C00', // Amber
-      8: '#FF4500', // Deep amber
-      9: '#D2691E', // Copper
-      10: '#B87333', // Deep copper
-      11: '#A0522D', // Pale brown
-      12: '#8B4513', // Brown
-      13: '#704214', // Deep brown
-      14: '#5D4037', // Pale black / very deep brown
-      15: '#3E2723', // Black / coffee
-      20: '#1A1A1A', // Jet black
-      25: '#000000', // Pitch black
-      30: '#000000',
-      35: '#000000',
-      40: '#000000' // Darkest
+    const srmColors = {
+      0: '#FFFFE0', 1: '#FFFFBF', 2: '#FFFF80', 3: '#FFFF40', 4: '#FFD700', 
+      5: '#FFC000', 6: '#FFA500', 7: '#FF8C00', 8: '#FF4500', 9: '#D2691E', 
+      10: '#B87333', 11: '#A0522D', 12: '#8B4513', 13: '#704214', 14: '#5D4037', 
+      15: '#3E2723', 20: '#1A1A1A', 25: '#000000', 30: '#000000', 35: '#000000', 40: '#000000'
     };
+    if (srm <= 0) return srmColors[0];
+    if (srm >= 40) return srmColors[40];
 
-    // 범위를 벗어난 값 처리
-    if (srm <= 0) return colors[0];
-    if (srm >= 40) return colors[40];
-
-    // 정의된 가장 가까운 SRM 값 찾기
-    const definedSrms = Object.keys(colors).map(Number).sort((a, b) => a - b);
+    const definedSrms = Object.keys(srmColors).map(Number).sort((a, b) => a - b);
     let closestSrm = definedSrms[0];
     let minDiff = Math.abs(srm - closestSrm);
 
@@ -306,222 +160,416 @@ function Simulator() {
         closestSrm = definedSrms[i];
       }
     }
-    return colors[closestSrm];
+    return srmColors[closestSrm];
   };
 
-  // --- UI 컴포넌트 편의 스타일 (다크모드용) ---
   const darkCardStyle = {
-    backgroundColor: '#1e1e1e', // 어두운 회색 배경
-    color: '#e0e0e0',           // 밝은 회색 텍스트
-    padding: '20px', 
-    borderRadius: '12px', 
+    backgroundColor: colors.bgCard, 
+    color: colors.textMain, 
+    padding: '30px', 
+    borderRadius: '16px', 
     marginBottom: '20px', 
-    border: '1px solid #333',
-    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.5)',
-    transition: 'all 0.3s ease-in-out' // 🌟 부드러운 전환 효과 추가
+    border: `1px solid ${colors.cardBorder}`,
+    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+    transition: 'all 0.3s ease-in-out' ,
+    fontFamily: '"Mulmaru", sans-serif'
   };
 
   const darkInputStyle = {
-    backgroundColor: '#2d2d2d', 
-    color: '#fff', 
-    border: '1px solid #444', 
-    padding: '8px', 
-    borderRadius: '4px',
+    backgroundColor: colors.bgInput, 
+    color: colors.textMain, 
+    border: `1px solid ${colors.cardBorder}`, 
+    padding: '10px 12px', 
+    borderRadius: '8px',
     outline: 'none',
-    width: '100%' // 부모 크기에 맞추기
+    width: '100%',
+    fontFamily: 'inherit',
+    transition: 'border-color 0.2s',
+    fontFamily: '"Mulmaru", sans-serif'
   };
 
-  const btnStyle = { padding: '6px 12px', marginLeft: '10px', cursor: 'pointer', borderRadius: '4px', border: 'none', fontWeight: 'bold' };
-  const deleteBtnStyle = { ...btnStyle, backgroundColor: '#1e1e1e', color: 'white' };
+  const btnStyle = { 
+    padding: '8px 16px', 
+    marginLeft: '10px', 
+    cursor: 'pointer', 
+    borderRadius: '8px', 
+    border: 'none', 
+    fontWeight: 'bold',
+    fontFamily: 'inherit',
+    transition: 'opacity 0.2s',
+    fontFamily: '"Mulmaru", sans-serif'
+  };
+  
+  const deleteBtnStyle = { ...btnStyle, backgroundColor: colors.bgMain, color: colors.textSub, padding: '8px 12px' };
 
   return (
-    // 🌟 [수정 포인트 1] 화면 전체를 Flexbox 중앙 정렬로 설정!
     <div style={{ 
-      width: '100%',
-      backgroundColor: '#121212', 
+      width: '100%', 
+      backgroundColor: colors.bgMain, 
       minHeight: '100vh', 
-      padding: '40px 0', // 좌우 패딩은 빼고 중앙 정렬에 집중
-      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif',
-      display: 'flex',       // Flexbox 가동
-      justifyContent: 'center', // 가로 중앙 정렬!
-      alignItems: 'flex-start'  // 세로 정렬은 위에서부터
+      padding: '40px 0', 
+      fontFamily: '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", sans-serif',
+      display: 'flex', 
+      justifyContent: 'center', 
+      alignItems: 'flex-start'  
     }}>
-      {/* 🌟 [수정 포인트 2] 실제 콘텐츠를 감싸는 내부 div, maxWidth 지정 및 중앙 배치 */}
-      <div style={{ 
-        width: '90%',        // 화면이 작을 땐 90%
-        maxWidth: '900px',    // 화면이 클 땐 최대 900px로 제한
-        display: 'flex',      
-        flexDirection: 'column', // 세로로 쌓기
-        gap: '20px',         // 요소 간 간격
-        paddingLeft: '20px',  // 작은 화면용 좌우 여백
-        paddingRight: '20px' 
-      }}>
+      <div style={{ width: '90%', maxWidth: '900px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
         
-        <h2 style={{ color: '#fff', textAlign: 'center', marginBottom: '30px', marginTop: '30px' }}>🍺 스마트 브루잉 시뮬레이터</h2>
+        <h2 style={{ color: colors.textMain, textAlign: 'center', marginBottom: '30px', marginTop: '20px', fontWeight: '800', letterSpacing: '1px' }}>
+          <span style={{ color: colors.beerGold }}>🍺 스마트 브루잉</span> 시뮬레이터
+        </h2>
         
         {/* 📝 레시피 설계 카드 */}
         <div style={darkCardStyle}>
-          <h3 style={{ color: '#fff', borderBottom: '1px solid #444', paddingBottom: '10px', marginTop: 0 }}>📝 레시피 설계</h3>
+          <h3 style={{ color: colors.textMain, borderBottom: `2px solid ${colors.cardBorder}`, paddingBottom: '15px', marginTop: 0, fontWeight: '700' }}>
+            📝 레시피 설계
+          </h3>
           
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '50px', marginBottom: '25px', marginTop: '20px', paddingRight:'20px'}}>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              배치 용량(L): 
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '40px', marginBottom: '30px', marginTop: '25px'}}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: colors.textSub, fontSize: '0.9em', fontWeight: '600' }}>
+              배치 용량(L)
               <input type="number" value={recipeData.batchSizeLiters} onChange={e => setRecipeData({...recipeData, batchSizeLiters: parseFloat(e.target.value) || 0})} style={darkInputStyle} />
             </label>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              효율(%): 
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: colors.textSub, fontSize: '0.9em', fontWeight: '600' }}>
+              매쉬 효율(%)
               <input type="number" step="0.01" value={recipeData.efficiency} onChange={e => setRecipeData({...recipeData, efficiency: parseFloat(e.target.value) || 0})} style={darkInputStyle} />
             </label>
-
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              발효 기간(일): 
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: colors.textSub, fontSize: '0.9em', fontWeight: '600' }}>
+              총 발효 기간(일)
               <input type="number" step="1" value={recipeData.durationDays} onChange={e => setRecipeData({...recipeData, durationDays: parseInt(e.target.value) || 0})} style={darkInputStyle} />
             </label>
-
-            
           </div>
 
-          <hr style={{ borderColor: '#333', margin: '20px 0' }}/>
+          <hr style={{ borderColor: colors.cardBorder, margin: '25px 0' }}/>
 
-          {/* 🌾 몰트 동적 리스트 */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
-            <h4 style={{ margin: 0, color: '#f39c12' }}>🌾 몰트 (Grains)</h4>
-            <button style={{...btnStyle, backgroundColor: '#2980b9', color: '#fff'}} onClick={() => addItem('grains', { name: dbIngredients.grains[0]?.name || "", weightKg: 1.0 })}>+ 몰트 추가</button>
+          {/* 🌾 몰트 */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <h4 style={{ margin: 0, color: colors.beerGold, fontSize: '1.2em' }}>🌾 베이스 & 특수 몰트</h4>
+            <button style={{...btnStyle, backgroundColor: '#E8860B', color: '#fff'}} onClick={() => addItem('grains', { name: dbIngredients.grains[0]?.name || "", weightKg: 1.0 })}>+ 몰트 추가</button>
           </div>
           {recipeData.grains.map((grain, index) => (
-            <div key={`grain-${index}`} style={{ marginBottom: '12px', display: 'flex', alignItems: 'center' }}>
+            <div key={`grain-${index}`} style={{ marginBottom: '15px', display: 'flex', alignItems: 'center' }}>
               <select value={grain.name} onChange={(e) => handleArrayChange('grains', index, 'name', e.target.value)} style={{ ...darkInputStyle, marginRight: '15px', flex: 2 }}>
                 {dbIngredients.grains.map(g => <option key={`g-${g.id}`} value={g.name}>{g.name}</option>)}
               </select>
-              <input type="number" step="0.1" value={grain.weightKg} onChange={(e) => handleArrayChange('grains', index, 'weightKg', e.target.value)} style={{ ...darkInputStyle, width: '80px', marginRight: '5px', textAlign: 'right' }} /> kg
-              
-              {index > 0 ? (
-                <button style={deleteBtnStyle} onClick={() => removeItem('grains', index)}>❌</button>
-              ) : (
-                <div style={{ width: '42px', marginLeft: '10px' }}></div> 
-              )}
+              <input type="number" step="0.1" value={grain.weightKg} onChange={(e) => handleArrayChange('grains', index, 'weightKg', e.target.value)} style={{ ...darkInputStyle, width: '90px', marginRight: '5px', textAlign: 'right' }} /> 
+              <span style={{ color: colors.textSub, width: '30px' }}>kg</span>
+              {index > 0 ? <button style={deleteBtnStyle} onClick={() => removeItem('grains', index)}>✕</button> : <div style={{ width: '42px', marginLeft: '10px' }}></div>}
             </div>
           ))}
 
-          <hr style={{ borderColor: '#333', margin: '20px 0' }}/>
+          <hr style={{ borderColor: colors.cardBorder, margin: '25px 0' }}/>
 
-          {/* 🌿 보일링 홉 동적 리스트 */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
-            <h4 style={{ margin: 0, color: '#2ecc71' }}>🌿 보일링 홉 (Hops)</h4>
-            <button style={{...btnStyle, backgroundColor: '#27ae60', color: '#fff'}} onClick={() => addItem('hops', { name: dbIngredients.hops[0]?.name || "", amountGrams: 10, boilTimeMinutes: 60 })}>+ 홉 추가</button>
+          {/* 🌿 보일링 홉 */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <h4 style={{ margin: 0, color: colors.hopGreen, fontSize: '1.2em' }}>🌿 끓임 홉 (Boil Hops)</h4>
+            <button style={{...btnStyle, backgroundColor: '#27AE60', color: '#fff'}} onClick={() => addItem('hops', { name: dbIngredients.hops[0]?.name || "", amountGrams: 10, boilTimeMinutes: 60 })}>+ 홉 추가</button>
           </div>
           {recipeData.hops.map((hop, index) => (
-            <div key={`hop-${index}`} style={{ marginBottom: '12px', display: 'flex', alignItems: 'center' }}>
+            <div key={`hop-${index}`} style={{ marginBottom: '15px', display: 'flex', alignItems: 'center' }}>
               <select value={hop.name} onChange={(e) => handleArrayChange('hops', index, 'name', e.target.value)} style={{ ...darkInputStyle, marginRight: '15px', flex: 2 }}>
                 {dbIngredients.hops.map(h => <option key={`h-${h.id}`} value={h.name}>{h.name}</option>)}
               </select>
-              <input type="number" step="1" value={hop.amountGrams} onChange={(e) => handleArrayChange('hops', index, 'amountGrams', e.target.value)} style={{ ...darkInputStyle, width: '70px', marginRight: '5px', textAlign: 'right' }} /> g 
-              <span style={{ margin: '0 10px', color: '#888' }}>@</span>
-              <input type="number" step="1" value={hop.boilTimeMinutes} onChange={(e) => handleArrayChange('hops', index, 'boilTimeMinutes', e.target.value)} style={{ ...darkInputStyle, width: '70px', marginLeft: '5px', marginRight: '5px', textAlign: 'right' }} /> 분
-              
-              {index > 0 ? (
-                <button style={deleteBtnStyle} onClick={() => removeItem('hops', index)}>❌</button>
-              ) : (
-                <div style={{ width: '42px', marginLeft: '10px' }}></div>
-              )}
+              <input type="number" step="1" value={hop.amountGrams} onChange={(e) => handleArrayChange('hops', index, 'amountGrams', e.target.value)} style={{ ...darkInputStyle, width: '80px', marginRight: '5px', textAlign: 'right' }} /> 
+              <span style={{ color: colors.textSub, width: '20px' }}>g</span>
+              <span style={{ margin: '0 10px', color: colors.textSub }}>@</span>
+              <input type="number" step="1" value={hop.boilTimeMinutes} onChange={(e) => handleArrayChange('hops', index, 'boilTimeMinutes', e.target.value)} style={{ ...darkInputStyle, width: '80px', marginLeft: '5px', marginRight: '5px', textAlign: 'right' }} /> 
+              <span style={{ color: colors.textSub, width: '25px' }}>분</span>
+              {index > 0 ? <button style={deleteBtnStyle} onClick={() => removeItem('hops', index)}>✕</button> : <div style={{ width: '42px', marginLeft: '10px' }}></div>}
             </div>
           ))}
 
-          <hr style={{ borderColor: '#333', margin: '20px 0' }}/>
+          <hr style={{ borderColor: colors.cardBorder, margin: '25px 0' }}/>
 
-          {/* 🌱 드라이홉 동적 리스트 */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
-            <h4 style={{ margin: 0, color: '#9b59b6' }}>🌱 드라이 호핑 (Dry Hops)</h4>
-            <button style={{...btnStyle, backgroundColor: '#8e44ad', color: '#fff'}} onClick={() => addItem('dryHops', { name: dbIngredients.hops[0]?.name || "", amountGrams: 30, hour: 0 })}>+ 드라이홉 추가</button>
+          {/* 🌱 드라이홉 */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <h4 style={{ margin: 0, color: '#9B59B6', fontSize: '1.2em' }}>🌱 드라이 호핑 (Dry Hops)</h4>
+            <button style={{...btnStyle, backgroundColor: '#8E44AD', color: '#fff'}} onClick={() => addItem('dryHops', { name: dbIngredients.hops[0]?.name || "", amountGrams: 30, hour: 0 })}>+ 드라이홉 추가</button>
           </div>
-          {recipeData.dryHops.length === 0 && <div style={{fontSize: '14px', color: '#777', fontStyle: 'italic', paddingLeft: '10px'}}>적용된 드라이홉이 없습니다.</div>}
+          {recipeData.dryHops.length === 0 && <div style={{fontSize: '0.9em', color: colors.textSub, fontStyle: 'italic', paddingLeft: '10px'}}>적용된 드라이홉이 없습니다.</div>}
           {recipeData.dryHops.map((dh, index) => (
-            <div key={`dh-${index}`} style={{ marginBottom: '12px', display: 'flex', alignItems: 'center' }}>
+            <div key={`dh-${index}`} style={{ marginBottom: '15px', display: 'flex', alignItems: 'center' }}>
               <select value={dh.name} onChange={(e) => handleArrayChange('dryHops', index, 'name', e.target.value)} style={{ ...darkInputStyle, marginRight: '15px', flex: 2 }}>
                 {dbIngredients.hops.map(h => <option key={`dhop-${h.id}`} value={h.name}>{h.name}</option>)}
               </select>
-              <input type="number" step="1" value={dh.amountGrams} onChange={(e) => handleArrayChange('dryHops', index, 'amountGrams', e.target.value)} style={{ ...darkInputStyle, width: '70px', marginRight: '5px', textAlign: 'right' }} /> g 
-              <span style={{ margin: '0 10px', color: '#888' }}>(투입:</span>
-              <input type="number" step="1" value={dh.hour} onChange={(e) => handleArrayChange('dryHops', index, 'hour', e.target.value)} style={{ ...darkInputStyle, width: '70px', marginRight: '5px', textAlign: 'right' }} /> <span style={{ color: '#888' }}>Day)</span>
-              
-              <button style={deleteBtnStyle} onClick={() => removeItem('dryHops', index)}>❌</button>
+              <input type="number" step="1" value={dh.amountGrams} onChange={(e) => handleArrayChange('dryHops', index, 'amountGrams', e.target.value)} style={{ ...darkInputStyle, width: '80px', marginRight: '5px', textAlign: 'right' }} /> 
+              <span style={{ color: colors.textSub, width: '20px' }}>g</span>
+              <span style={{ margin: '0 15px 0 10px', color: colors.textSub }}>(투입:</span>
+              <input type="number" step="1" value={dh.hour} onChange={(e) => handleArrayChange('dryHops', index, 'hour', e.target.value)} style={{ ...darkInputStyle, width: '80px', marginRight: '5px', textAlign: 'right' }} /> 
+              <span style={{ color: colors.textSub }}>일차)</span>
+              <button style={deleteBtnStyle} onClick={() => removeItem('dryHops', index)}>✕</button>
             </div>
           ))}
 
-          <hr style={{ borderColor: '#333', margin: '20px 0' }}/>
+          <hr style={{ borderColor: colors.cardBorder, margin: '25px 0' }}/>
 
-          {/* 🦠 효모 설정 */}
-          <h4 style={{ margin: '0 0 15px 0', color: '#e74c3c' }}>🦠 효모 (Yeast)</h4>
+          {/* 🦠 효모 */}
+          <h4 style={{ margin: '0 0 15px 0', color: colors.danger, fontSize: '1.2em' }}>🦠 효모 (Yeast)</h4>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <select value={recipeData.yeast.name} onChange={(e) => setRecipeData({...recipeData, yeast: {...recipeData.yeast, name: e.target.value}})} style={{ ...darkInputStyle, marginRight: '15px', flex: 1 }}>
               {dbIngredients.yeasts.map(y => <option key={`y-${y.id}`} value={y.name}>{y.name}</option>)}
             </select>
-            <input type="number" step="0.1" value={recipeData.yeast.amount} onChange={(e) => setRecipeData({...recipeData, yeast: {...recipeData.yeast, amount: parseFloat(e.target.value) || 0}})} style={{ ...darkInputStyle, width: '80px', marginRight: '5px', textAlign: 'right' }} /> g
+            <input type="number" step="0.1" value={recipeData.yeast.amount} onChange={(e) => setRecipeData({...recipeData, yeast: {...recipeData.yeast, amount: parseFloat(e.target.value) || 0}})} style={{ ...darkInputStyle, width: '90px', marginRight: '5px', textAlign: 'right' }} /> 
+            <span style={{ color: colors.textSub }}>g</span>
           </div>
+
+          <hr style={{ borderColor: colors.cardBorder, margin: '25px 0' }}/>
+
+          {/* 🌡️ 온도 스케줄 */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <h4 style={{ margin: 0, color: colors.info, fontSize: '1.2em' }}>🌡️ 발효 온도 스케줄</h4>
+            <button style={{...btnStyle, backgroundColor: '#2980B9', color: '#fff'}} onClick={() => {
+              const defaultDay = recipeData.durationDays > 3 ? recipeData.durationDays - 3 : Math.floor(recipeData.durationDays / 2);
+              const newSteps = [...recipeData.tempSchedule.steps, { hour: defaultDay, targetTemp: 15.0 }];
+              setRecipeData({...recipeData, tempSchedule: {...recipeData.tempSchedule, steps: newSteps}});
+            }}>+ 온도 변경 추가</button>
+          </div>
+
+          <div style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', backgroundColor: colors.bgInput, padding: '15px', borderRadius: '12px', borderLeft: `4px solid ${colors.info}` }}>
+            <span style={{ color: '#fff', fontWeight: 'bold', marginRight: '15px', minWidth: '80px' }}>▶ 기본 발효</span>
+            <input type="number" step="0.1" value={recipeData.tempSchedule.initialTemp} onChange={(e) => setRecipeData({...recipeData, tempSchedule: {...recipeData.tempSchedule, initialTemp: parseFloat(e.target.value) || 0}})} style={{ ...darkInputStyle, width: '90px', marginRight: '5px', textAlign: 'right', backgroundColor: colors.bgCard }} /> 
+            <span style={{color: colors.textSub, fontWeight: 'bold'}}>°C</span>
+            <span style={{ margin: '0 15px', color: colors.textSub, fontSize: '0.9em' }}>(0일차부터 시작)</span>
+          </div>
+
+          {recipeData.tempSchedule.steps.length === 0 && <div style={{fontSize: '0.9em', color: colors.textSub, fontStyle: 'italic', paddingLeft: '10px'}}>추가된 온도 변경 스케줄이 없습니다.</div>}
+          
+          {recipeData.tempSchedule.steps.map((step, index) => (
+            <div key={`temp-${index}`} style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', marginLeft: '20px' }}>
+              <span style={{ color: colors.textSub, marginRight: '15px', fontSize: '1.2em' }}>↳</span>
+              <input type="number" step="1" value={step.hour} onChange={(e) => {
+                const newSteps = [...recipeData.tempSchedule.steps];
+                newSteps[index].hour = parseInt(e.target.value) || 0;
+                setRecipeData({...recipeData, tempSchedule: {...recipeData.tempSchedule, steps: newSteps}});
+              }} style={{ ...darkInputStyle, width: '80px', marginRight: '8px', textAlign: 'right', color: colors.beerGold, fontWeight: 'bold' }} /> 
+              <span style={{ color: colors.textSub, marginRight: '20px' }}>일차부터</span>
+              
+              <input type="number" step="0.1" value={step.targetTemp} onChange={(e) => {
+                const newSteps = [...recipeData.tempSchedule.steps];
+                newSteps[index].targetTemp = parseFloat(e.target.value) || 0;
+                setRecipeData({...recipeData, tempSchedule: {...recipeData.tempSchedule, steps: newSteps}});
+              }} style={{ ...darkInputStyle, width: '90px', marginRight: '8px', textAlign: 'right', color: colors.danger, fontWeight: 'bold' }} /> 
+              <span style={{color: colors.textSub}}>°C 로 변경</span>
+              
+              <button style={{...deleteBtnStyle, marginLeft: '15px'}} onClick={() => {
+                const newSteps = [...recipeData.tempSchedule.steps];
+                newSteps.splice(index, 1);
+                setRecipeData({...recipeData, tempSchedule: {...recipeData.tempSchedule, steps: newSteps}});
+              }}>✕</button>
+            </div>
+          ))}
+
         </div>
 
         {/* 🔘 액션 버튼 영역 */}
-        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', margin: '30px 0' }}>
-          <button onClick={runSimulation} disabled={loading || isSaving} style={{ padding: '15px 30px', fontSize: '18px', cursor: (loading || isSaving) ? 'wait' : 'pointer', backgroundColor: loading ? '#d35400' : '#e67e22', border: 'none', borderRadius: '8px', color: 'white', fontWeight: 'bold', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', transition: '0.2s' }}>
-            {loading ? '⏳ 시뮬레이션 중...' : '🚀 시뮬레이션 가동'}
+        <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', margin: '20px 0 40px 0' }}>
+          <button onClick={runSimulation} disabled={loading || isSaving} style={{ 
+            padding: '16px 32px', fontSize: '1.1em', cursor: (loading || isSaving) ? 'wait' : 'pointer', 
+            backgroundColor: loading ? '#B9770E' : colors.beerGold, border: 'none', borderRadius: '12px', 
+            color: '#111', fontWeight: '800', fontFamily: 'inherit',
+            boxShadow: `0 4px 15px ${colors.beerGold}40`, transition: 'all 0.2s' 
+          }}>
+            {loading ? '⏳ 시뮬레이션 분석 중...' : '🚀 발효 시뮬레이션 가동'}
           </button>
 
-          <button onClick={saveRecipe} disabled={loading || isSaving} style={{ padding: '15px 30px', fontSize: '18px', cursor: (loading || isSaving) ? 'wait' : 'pointer', backgroundColor: isSaving ? '#27ae60' : '#2ecc71', border: 'none', borderRadius: '8px', color: 'white', fontWeight: 'bold', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', transition: '0.2s' }}>
-            {isSaving ? '💾 저장 중...' : '💾 레시피 저장'}
+          <button onClick={saveRecipe} disabled={loading || isSaving} style={{ 
+            padding: '16px 32px', fontSize: '1.1em', cursor: (loading || isSaving) ? 'wait' : 'pointer', 
+            backgroundColor: isSaving ? '#229954' : colors.hopGreen, border: 'none', borderRadius: '12px', 
+            color: '#111', fontWeight: '800', fontFamily: 'inherit',
+            boxShadow: `0 4px 15px ${colors.hopGreen}40`, transition: 'all 0.2s' 
+          }}>
+            {isSaving ? '💾 저장 중...' : '💾 내 일지에 레시피 저장'}
           </button>
         </div>
 
         {/* --- 📊 시뮬레이션 결과 화면 --- */}
         {result && result.logs && (
-          <div style={{ animation: 'fadeIn 0.5s' }}>
-            {/* 상단 스탯 대시보드 */}
-            <div style={{ ...darkCardStyle, backgroundColor: '#2c3e50', borderColor: '#34495e' }}>
-              <h2 style={{ marginTop: 0, color: '#ecf0f1', borderBottom: '1px solid #7f8c8d', paddingBottom: '10px' }}>📊 레시피 분석 리포트</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', fontSize: '18px', color: '#bdc3c7', marginTop: '20px' }}>
-                <p><strong style={{color:'#fff'}}>초기 비중 (OG):</strong> <span style={{color:'#f1c40f'}}>{result.originalGravity.toFixed(4)}</span></p>
-                <p><strong style={{color:'#fff'}}>목표 비중 (FG):</strong> <span style={{color:'#f1c40f'}}>{result.finalGravity.toFixed(4)}</span></p>
-                <p><strong style={{color:'#fff'}}>예상 알코올:</strong> <span style={{color:'#e74c3c'}}>{result.estimatedAbv.toFixed(1)}% ABV</span></p>
-                <p><strong style={{color:'#fff'}}>쓴맛 (IBU):</strong> {result.ibu.toFixed(1)}</p>
-
-                {/* 🌟 [수정 포인트 3] SRM 진짜 색상 표시 박스 추가! */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <strong style={{color:'#fff'}}>색상 (SRM):</strong>
-                  <div style={{
-                    width: '30px',
-                    height: '30px',
-                    borderRadius: '5px',
-                    backgroundColor: srmToColor(result.srm), // [ New ] srmToColor 함수 호출
-                    border: '1px solid #555',
-                    display: 'inline-block',
-                    boxShadow: '0 2px 5px rgba(0,0,0,0.5)'
-                  }}></div>
-                  <span style={{color: '#fff', fontWeight: 'bold'}}>{result.srm.toFixed(1)}</span>
+          <div style={{ animation: 'fadeIn 0.6s ease-out' }}>
+            <div style={{ ...darkCardStyle, borderColor: colors.cardBorder }}>
+              <h2 style={{ marginTop: 0, color: colors.textMain, borderBottom: `2px solid ${colors.cardBorder}`, paddingBottom: '15px', fontWeight: '800' }}>
+                📊 레시피 분석 리포트
+              </h2>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '25px', fontSize: '1.1em', color: colors.textSub, marginTop: '25px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <span style={{ fontSize: '0.85em', fontWeight: 'bold' }}>초기 비중 (OG)</span>
+                  <span style={{ color: colors.beerGold, fontSize: '1.4em', fontWeight: '800' }}>{result.originalGravity.toFixed(4)}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <span style={{ fontSize: '0.85em', fontWeight: 'bold' }}>목표 비중 (FG)</span>
+                  <span style={{ color: colors.beerGold, fontSize: '1.4em', fontWeight: '800' }}>{result.finalGravity.toFixed(4)}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <span style={{ fontSize: '0.85em', fontWeight: 'bold' }}>예상 알코올 (ABV)</span>
+                  <span style={{ color: colors.danger, fontSize: '1.4em', fontWeight: '800' }}>{result.estimatedAbv.toFixed(1)}%</span>
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <span style={{ fontSize: '0.85em', fontWeight: 'bold' }}>쓴맛 (IBU)</span>
+                  <span style={{ color: colors.textMain, fontSize: '1.4em', fontWeight: '800' }}>{result.ibu.toFixed(1)}</span>
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <span style={{ fontSize: '0.85em', fontWeight: 'bold' }}>색상 (SRM)</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{
+                      width: '28px', height: '28px', borderRadius: '6px', backgroundColor: srmToColor(result.srm),
+                      border: `2px solid ${colors.cardBorder}`, display: 'inline-block', boxShadow: '0 2px 5px rgba(0,0,0,0.5)'
+                    }}></div>
+                    <span style={{ color: colors.textMain, fontSize: '1.4em', fontWeight: '800' }}>{result.srm.toFixed(1)}</span>
+                  </div>
                 </div>
 
-                <p><strong style={{color:'#fff'}}>BU:GU 비율:</strong> {result.buGuRatio.toFixed(2)} <br/><span style={{fontSize:'14px', color:'#2ecc71'}}>({result.balanceProfile})</span></p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <span style={{ fontSize: '0.85em', fontWeight: 'bold' }}>BU:GU 비율</span>
+                  <div>
+                    <span style={{ color: colors.textMain, fontSize: '1.4em', fontWeight: '800' }}>{result.buGuRatio.toFixed(2)}</span>
+                    <span style={{ fontSize: '0.8em', color: colors.hopGreen, marginLeft: '8px', fontWeight: 'bold' }}>{result.balanceProfile}</span>
+                  </div>
+                </div>
               </div>
               
-              <div style={{ marginTop: '20px', paddingTop: '15px', borderTop: '1px dashed #7f8c8d', display: 'flex', gap: '30px', color: '#95a5a6' }}>
-                <p style={{ margin: 0 }}>🌱 드라이 홉 투입률: <strong style={{color:'#fff'}}>{result.dryHopRate.toFixed(1)} g/L</strong></p>
-                <p style={{ margin: 0 }}>🦠 효모 피칭률: <strong style={{color:'#fff'}}>{result.pitchRate.toFixed(2)} g/L</strong></p>
+              <div style={{ marginTop: '25px', paddingTop: '20px', borderTop: `1px dashed ${colors.cardBorder}`, display: 'flex', gap: '40px', color: colors.textSub, fontSize: '0.95em' }}>
+                <p style={{ margin: 0 }}>🌱 드라이 홉 투입률: <strong style={{color: colors.textMain}}>{result.dryHopRate.toFixed(1)} g/L</strong></p>
+                <p style={{ margin: 0 }}>🦠 효모 피칭률: <strong style={{color: colors.textMain}}>{result.pitchRate.toFixed(2)} g/L</strong></p>
               </div>
-            </div>
-            
-            {/* 하단 타임라인 로그 */}
-            <h3 style={{ color: '#fff', marginTop: '30px' }}>⏱️ 시간별 발효 타임라인 (총 {result.logs.length}건)</h3>
-            <div style={{ maxHeight: '500px', overflowY: 'auto', border: '1px solid #333', borderRadius: '8px', padding: '15px', backgroundColor: '#1a1a1a', boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.5)' }}>
-              {result.logs.map((log, index) => (
-                <div key={index} style={{ padding: '12px 0', borderBottom: index === result.logs.length - 1 ? 'none' : '1px solid #333', display: 'flex', gap: '20px', color: '#bbb', alignItems: 'center' }}>
-                  <div style={{ fontWeight: 'bold', color: '#e67e22', minWidth: '70px', fontSize: '1.1em' }}>
-                    {log.hour <= 0 ? `${log.hour}h` : `${log.hour} Day`}
+
+              {/* 플레이버 태그 요약 */}
+              {result.logs && result.logs.length > 0 && (
+                <div style={{ marginTop: '25px', paddingTop: '20px', borderTop: `1px solid ${colors.cardBorder}` }}>
+                  <h4 style={{ margin: '0 0 10px 0', color: colors.textSub, fontSize: '0.9em', fontWeight: 'bold' }}>✨ 예상 향미 프로필 (Flavor Profile)</h4>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {result.logs[result.logs.length - 1].flavorTags && result.logs[result.logs.length - 1].flavorTags.length > 0 ? (
+                      result.logs[result.logs.length - 1].flavorTags.map((tag, idx) => (
+                        <span key={idx} style={{ 
+                          backgroundColor: colors.bgInput, color: colors.hopGreen, 
+                          padding: '6px 12px', borderRadius: '20px', fontSize: '0.85em', fontWeight: 'bold',
+                          border: `1px solid ${colors.hopGreen}40`
+                        }}>
+                          #{tag}
+                        </span>
+                      ))
+                    ) : (
+                      <span style={{ color: colors.textSub, fontSize: '0.9em' }}>특별히 감지된 향미 태그가 없습니다.</span>
+                    )}
                   </div>
-                  <div style={{ minWidth: '70px', color: '#3498db', fontWeight: 'bold' }}>{log.temperature}°C</div>
-                  <div style={{ minWidth: '120px' }}>Gravity: <span style={{color:'#fff'}}>{log.gravity.toFixed(4)}</span></div>
-                  <div style={{ minWidth: '90px' }}>ABV: <span style={{color:'#fff'}}>{log.abv.toFixed(1)}%</span></div>
+                </div>
+              )}
+            </div>
+
+{/* 🌟 3. [NEW] 한눈에 보는 발효 타임라인 그래프 🌟 */}
+            <h3 style={{ color: colors.textMain, marginTop: '40px', marginBottom: '15px', fontWeight: '700' }}>📈 발효 비중 및 온도 추이</h3>
+            <div style={{ 
+              backgroundColor: colors.bgCard,
+              border: `1px solid ${colors.cardBorder}`,
+              borderRadius: '12px',
+              padding: '30px 20px 10px 0',
+              marginBottom: '30px',
+              height: '400px',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.3)'
+            }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={result.logs.filter(log => log.hour >= 24 && log.hour <= recipeData.durationDays * 24)} margin={{ top: 20, right: 20, bottom: 5, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#444" vertical={false} />
                   
-                  <div style={{ color: '#7f8c8d', fontSize: '0.9em', flex: 1, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                    <span style={{color: '#95a5a6'}}>▶ {log.phase}</span>
-                    {log.flavorTags && log.flavorTags.length > 0 && <span style={{color:'#2ecc71', marginLeft:'10px'}}>🌿 {log.flavorTags.join(', ')}</span>}
+                  {/* 🌟 수정: ticks 속성에 24시간 단위의 배열을 직접 계산해서 넣음으로써 정확히 일수대로 칸이 나뉘게 강제함 */}
+                  <XAxis 
+                    type="number"
+                    dataKey="hour" 
+                    domain={[24, recipeData.durationDays * 24]}
+                    ticks={Array.from({ length: recipeData.durationDays }, (_, i) => (i + 1) * 24)}
+                    tickFormatter={(tick) => `${tick / 24}d`} 
+                    stroke={colors.textSub} 
+                    tick={{ fill: colors.textSub, fontSize: 12 }}
+                  />
+                  
+                  <YAxis 
+                    yAxisId="gravity" 
+                    domain={[1.01, (dataMax) => dataMax + 0.002]} 
+                    stroke={colors.beerGold} 
+                    tickFormatter={(val) => val.toFixed(3)}
+                    tick={{ fill: colors.beerGold, fontSize: 12 }}
+                  />
+                  
+                  <YAxis 
+                    yAxisId="temp" 
+                    orientation="right" 
+                    domain={[(dataMin) => dataMin - 2, (dataMax) => dataMax + 2]}
+                    stroke={colors.info} 
+                    tick={{ fill: colors.info, fontSize: 12 }}
+                  />
+
+                  <YAxis 
+                    yAxisId="abv" 
+                    orientation="right" 
+                    domain={[0, 'dataMax + 1']}
+                    hide={true} 
+                  />
+
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: colors.bgInput, border: `1px solid ${colors.cardBorder}`, color: colors.textMain, borderRadius: '8px' }}
+                    labelFormatter={(label) => `${label / 24}일 차`}
+                  />
+                  <Legend wrapperStyle={{ paddingTop: '15px' }} />
+
+                  <ReferenceLine y={result.originalGravity} yAxisId="gravity" stroke={colors.textSub} strokeDasharray="3 3" label={{ position: 'top', value: `OG: ${result.originalGravity.toFixed(3)}`, fill: colors.textSub, fontSize: 12 }} />
+                  <ReferenceLine y={result.finalGravity} yAxisId="gravity" stroke={colors.hopGreen} strokeDasharray="3 3" label={{ position: 'bottom', value: `FG: ${result.finalGravity.toFixed(3)}`, fill: colors.hopGreen, fontSize: 12 }} />
+
+                  <Line yAxisId="gravity" type="monotone" dataKey="gravity" name="비중 (Gravity)" stroke={colors.beerGold} strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+                  <Line yAxisId="temp" type="stepAfter" dataKey="temperature" name="온도 (°C)" stroke={colors.info} strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                  <Line yAxisId="abv" type="monotone" dataKey="abv" name="알코올 (ABV %)" stroke={colors.danger} strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* 🌟 4-1. [NEW] 발효 이전 (양조) 타임라인 로그 */}
+            <h3 style={{ color: colors.textMain, marginTop: '40px', marginBottom: '15px', fontWeight: '700' }}>🔥 발효 이전 매싱 & 보일링 타임라인</h3>
+            <div style={{ 
+              maxHeight: '250px', overflowY: 'auto', border: `1px solid ${colors.cardBorder}`, 
+              borderRadius: '12px', padding: '15px 25px', backgroundColor: colors.bgInput, 
+              boxShadow: 'inset 0 4px 10px rgba(0,0,0,0.5)', marginBottom: '30px'
+            }}>
+              {result.logs.filter(log => log.hour < 0).map((log, index) => (
+                <div key={`pre-${index}`} style={{ 
+                  padding: '12px 0', 
+                  borderBottom: index === result.logs.filter(l => l.hour < 0).length - 1 ? 'none' : `1px dashed ${colors.cardBorder}`, 
+                  display: 'flex', gap: '25px', color: colors.textSub, alignItems: 'center' 
+                }}>
+                  <div style={{ fontWeight: '800', color: colors.textMain, minWidth: '70px', fontSize: '1.1em' }}>
+                    {log.hour}h
+                  </div>
+                  <div style={{ minWidth: '70px', color: '#E67E22', fontWeight: '700' }}>{log.temperature}°C</div>
+                  <div style={{ minWidth: '130px' }}>Gravity <strong style={{color: colors.beerGold}}>{log.gravity.toFixed(4)}</strong></div>
+                  
+                  <div style={{ color: colors.textSub, fontSize: '0.95em', flex: 1, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                    ▶ {log.phase}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* 🌟 4-2. [NEW] 발효 타임라인 로그 */}
+            <h3 style={{ color: colors.textMain, marginTop: '20px', marginBottom: '15px', fontWeight: '700' }}>⏱️ 발효 타임라인 로그</h3>
+            <div style={{ 
+              maxHeight: '400px', overflowY: 'auto', border: `1px solid ${colors.cardBorder}`, 
+              borderRadius: '12px', padding: '15px 25px', backgroundColor: colors.bgInput, 
+              boxShadow: 'inset 0 4px 10px rgba(0,0,0,0.5)' 
+            }}>
+              {result.logs.filter(log => log.hour >= 0 && log.hour <= recipeData.durationDays * 24).map((log, index) => (
+                <div key={`ferm-${index}`} style={{ 
+                  padding: '16px 0', 
+                  borderBottom: index === result.logs.filter(l => l.hour >= 0 && l.hour <= recipeData.durationDays * 24).length - 1 ? 'none' : `1px solid ${colors.cardBorder}`, 
+                  display: 'flex', gap: '25px', color: colors.textSub, alignItems: 'center' 
+                }}>
+                  <div style={{ fontWeight: '800', color: colors.beerGold, minWidth: '70px', fontSize: '1.1em' }}>
+                    {log.hour === 0 ? `0h` : `${log.hour / 24} Day`}
+                  </div>
+                  <div style={{ minWidth: '70px', color: colors.info, fontWeight: '700' }}>{log.temperature}°C</div>
+                  <div style={{ minWidth: '130px' }}>Gravity <strong style={{color: colors.textMain}}>{log.gravity.toFixed(4)}</strong></div>
+                  <div style={{ minWidth: '100px' }}>ABV <strong style={{color: colors.danger}}>{log.abv.toFixed(1)}%</strong></div>
+                  
+                  <div style={{ color: colors.textSub, fontSize: '0.95em', flex: 1, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                    ▶ {log.phase}
                   </div>
                 </div>
               ))}
@@ -532,4 +580,5 @@ function Simulator() {
     </div>
   );
 }
-export default Simulator
+
+export default Simulator;
