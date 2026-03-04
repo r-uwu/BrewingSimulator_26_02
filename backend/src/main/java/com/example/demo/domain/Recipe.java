@@ -74,4 +74,6 @@ public class Recipe {
     }
     
     private double srm;
+    private double ibu;
+    private double abv;
 }

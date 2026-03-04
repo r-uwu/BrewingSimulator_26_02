@@ -23,6 +23,8 @@ public class SimulationRequestDto {
     private List<DryHopRequest> dryHops;
     private TemperatureSchedule tempSchedule;
     private double srm;
+    private double ibu;
+    private double abv;
 
     // 내부 DTO 클래스들
     // 프론트엔드에서 이름과 양만 받음

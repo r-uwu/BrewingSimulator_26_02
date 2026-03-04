@@ -18,6 +18,8 @@ public class RecipeDto {
     private List<DryHopDto> dryHops;
     private YeastDto yeast;
     private double srm;
+    private double ibu;
+    private double abv;
 
     public RecipeDto(Recipe recipe) {
         this.id = recipe.getId();
@@ -41,7 +43,9 @@ public class RecipeDto {
                 .map(dh -> new DryHopDto(dh.getHop().getName(), dh.getAmountGrams(), dh.getInsertHour()))
                 .collect(Collectors.toList());
         
-        this.srm = recipe.getSrm();
+        this.srm = recipe.getSrm();        
+        this.ibu = recipe.getIbu();
+        this.abv = recipe.getAbv();
     }
 
     public record GrainDto(String name, double weightKg) {}

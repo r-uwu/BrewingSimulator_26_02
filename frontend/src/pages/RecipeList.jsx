@@ -93,6 +93,12 @@ function RecipeList() {
                     <span className="badge">{recipe.batchSizeLiters}L 배치</span>
                     <span className="badge">{recipe.durationDays}일 발효</span>
                   </div>
+                  <div style={{ display: 'flex', gap: '6px', whiteSpace: 'nowrap', marginTop: '4px'}}>
+                    <span className="badge">{recipe.srm.toFixed(1)} SRM</span>
+                    <span className="badge">{recipe.abv.toFixed(1)} ABV</span>
+                    <span className="badge">{recipe.ibu.toFixed(1)} IBUs</span>
+                    
+                  </div>
                 </div>
                 
                 {/* 재료 리스트 상세 */}

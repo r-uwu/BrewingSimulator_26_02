@@ -142,7 +142,10 @@ function Simulator() {
 
       const saveData = {
         ...recipeData,
-        srm: simResult.srm
+        srm: simResult.srm,
+        ibu: simResult.ibu,
+        abv: simResult.estimatedAbv
+
       };
 
       const response = await fetch(`http://localhost:8080/api/brewing/save?recipeName=${encodeURIComponent(recipeName)}`, {

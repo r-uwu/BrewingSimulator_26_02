@@ -118,6 +118,8 @@ public class BrewingController {
         recipe.setName(recipeName);
         recipe.setDurationDays(request.getDurationDays());
         recipe.setSrm(request.getSrm());
+        recipe.setIbu(request.getIbu());
+        recipe.setAbv(request.getAbv());
         
         for (SimulationRequestDto.GrainRequest g : request.getGrains()) {
             Grain grain = grainRepo.findByName(g.getName())
